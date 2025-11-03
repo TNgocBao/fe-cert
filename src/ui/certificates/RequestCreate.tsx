@@ -61,10 +61,10 @@ console.log(user?.fullName);
         requestCode: `REQ_${Date.now()}`,
         type: form.requestType,
         status: 'PENDING',
-        studentId: user?.username || user?.id // Use username as studentId since that's how the backend expects it
+        studentId:  user?.studentCode // Use studentCode as studentId since that's how the backend expects it
       };
 
-      const res = await apiCall('/api/certificate-requests', {
+      const res = await apiCall(`/api/v1/requests/${user?.studentCode}/signrequest`, {
         method: 'POST',
         body: JSON.stringify(requestData)
       });

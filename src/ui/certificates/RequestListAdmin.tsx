@@ -16,6 +16,7 @@ type CertificateRequest = {
   directorApprovedBy?: string;
   createdAt: string;
   reviewedAt?: string;
+  requestCode?: string;
   directorReviewedAt?: string;
   completedAt?: string;
   serialNo?: string;
@@ -147,42 +148,45 @@ export const RequestListAdmin: React.FC = () => {
     }
   };
 
-  const handleSign = async () => {
-    if (!signModal.request || !p12File) {
-      setError("Vui lòng chọn file P12 và điền đầy đủ thông tin.");
-      return;
+const handleSign = async () => {
+  if (!signModal.request || !p12File) {
+    setError("Vui lòng chọn file P12 và điền đầy đủ thông tin.");
+    return;
+  }
+
+  setSigning(true);
+  setError("");
+  try {
+    const formData = new FormData();
+    formData.append("studentcode", signModal.request.studentCode || "SV001");
+    formData.append("staffcode", user?.staffCode || "");
+    formData.append("p12File", p12File);
+    formData.append("requestCode", signModal.request.requestCode || "");
+    formData.append("alias", alias);
+    formData.append("keystorepass", keystorePass);
+
+    const res = await fetch("/api/v1/requests/sign", {
+      method: "POST",
+      body: formData,
+      
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      setSuccess("Ký chứng chỉ thành công! File: " + data.signedFilePath);
+      setSignModal({ isOpen: false, request: null });
+      loadRequests();
+    } else {
+      const text = await res.text();
+      setError("Ký chứng chỉ thất bại: " + text);
     }
+  } catch (err) {
+    setError("Lỗi khi ký chứng chỉ: " + (err as Error).message);
+  } finally {
+    setSigning(false);
+  }
+};
 
-    setSigning(true);
-    setError("");
-    try {
-      const formData = new FormData();
-      formData.append("studentcode", signModal.request.studentCode || "");
-      formData.append("staffcode", user?.id || "");
-      formData.append("p12File", p12File);
-      formData.append("alias", alias);
-      formData.append("keystorepass", keystorePass);
-
-      const res = await fetch("/api/v1/requests/sign", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setSuccess("Ký chứng chỉ thành công! File: " + data.signedFilePath);
-        setSignModal({ isOpen: false, request: null });
-        loadRequests();
-      } else {
-        const text = await res.text();
-        setError("Ký chứng chỉ thất bại: " + text);
-      }
-    } catch (err) {
-      setError("Lỗi khi ký chứng chỉ: " + (err as Error).message);
-    } finally {
-      setSigning(false);
-    }
-  };
 
   const getStatusColor = (status: string) => {
     switch (status.toUpperCase()) {
