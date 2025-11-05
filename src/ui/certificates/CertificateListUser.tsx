@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../AuthContext';
 import { useApi } from '../api';
+import { useNavigate } from 'react-router-dom';
+import { CertificatePdfActions } from './CertificatePdfActions';
 
 type Certificate = {
   id: string;
   certId: string;
   templateId: string;
-  studentId: string;
+  studentCode: string;
   issuedAt: string;
   expireAt?: string;
   status: string;
@@ -14,11 +16,13 @@ type Certificate = {
   certificate: string;
   pdfUri?: string;
   pdfSha256?: string;
+  serialNumber?: string;
 };
 
 export const CertificateListUser: React.FC = () => {
   const { user } = useAuth();
   const { apiCall } = useApi();
+  const navigate = useNavigate();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
@@ -30,23 +34,41 @@ export const CertificateListUser: React.FC = () => {
   const loadCertificates = async () => {
     try {
       setLoading(true);
-      const res = await apiCall('/api/certificates/my?page=0&size=50');
+      const studentCode = user?.studentCode;
+      console.log('Student Code:', studentCode);
+      
+      if (!studentCode) {
+        setError('Không thể xác định mã sinh viên. Vui lòng đăng nhập lại.');
+        setLoading(false);
+        return;
+      }
+
+      // Use the student-specific endpoint
+      const res = await apiCall(`/api/${studentCode}/certificates?page=0&size=50`);
       if (res.ok) {
-        const data = await res.json();
-        setCertificates(data.content || []);
+        const apiResponse = await res.json();
+        console.log('Certificate data received:', apiResponse);
+        // The response is wrapped in ApiResponse format
+        const data = apiResponse.data;
+        setCertificates(data ? data.content || [] : []);
+        setError('');
+        console.log('Certificates array:', data ? data.content : []);
       } else {
-        setError('Không thể tải danh sách chứng chỉ');
+        const errorText = await res.text();
+        console.error('API Error:', res.status, errorText);
+        setError(`Không thể tải danh sách chứng chỉ: ${res.status} ${res.statusText}`);
       }
     } catch (err) {
-      setError('Lỗi khi tải danh sách chứng chỉ');
+      console.error('Network Error:', err);
+      setError('Lỗi khi tải danh sách chứng chỉ: ' + (err as Error).message);
     } finally {
       setLoading(false);
     }
   };
-
-  const getStatusColor = (status: string) => {
+    const getStatusColor = (status: string) => {
     switch (status.toUpperCase()) {
       case 'ACTIVE':
+      case 'ISSUED':
         return 'bg-green-100 text-green-800 border-green-200';
       case 'EXPIRED':
         return 'bg-red-100 text-red-800 border-red-200';
@@ -109,7 +131,7 @@ export const CertificateListUser: React.FC = () => {
             <h3 className="mt-4 text-lg font-medium text-gray-900">Không tìm thấy chứng chỉ nào</h3>
             <p className="mt-2 text-gray-500">Bạn chưa được cấp chứng chỉ nào. Hãy tạo yêu cầu chứng chỉ mới.</p>
             <button
-              onClick={() => window.location.href = '/certificates/requests/create'}
+              onClick={() => navigate('/certificates/requests/create')}
               className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               Tạo Yêu Cầu Chứng Chỉ
@@ -169,30 +191,13 @@ export const CertificateListUser: React.FC = () => {
 
                     {/* Actions */}
                     <div className="mt-6 pt-4 border-t border-gray-100">
-                      <div className="flex space-x-2">
-                        <a
-                          href={`/api/certificates/${cert.id}/pdf`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 inline-flex items-center justify-center px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium rounded-lg hover-lift shadow-glow transition-all duration-300"
-                        >
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                          Xem PDF
-                        </a>
-                        <a
-                          href={`/api/certificates/download/${cert.id}`}
-                          download={`certificate_${cert.serialNo || cert.id}.pdf`}
-                          className="flex-1 inline-flex items-center justify-center px-3 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white text-sm font-medium rounded-lg hover-lift shadow-glow transition-all duration-300"
-                        >
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                          Tải Xuống
-                        </a>
-                      </div>
+                      <CertificatePdfActions
+                        certId={cert.certId} 
+                        studentCode={cert.studentCode} 
+                        className="w-full"
+                        viewButtonText="Xem PDF"
+                        buttonSize="sm"
+                      />
                     </div>
                   </div>
                 </div>

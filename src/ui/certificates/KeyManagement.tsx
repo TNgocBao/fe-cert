@@ -85,9 +85,9 @@ export const KeyManagement: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4">
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-lg">
-        <h1 className="text-2xl font-semibold mb-6 text-gray-900 text-center">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex flex-col items-center justify-center px-4">
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-300 p-8 w-full max-w-lg">
+        <h1 className="text-2xl font-semibold mb-6 text-blue-800 text-center">
           Generate & Download .p12 Certificate
         </h1>
 
@@ -100,7 +100,7 @@ export const KeyManagement: React.FC = () => {
           <select
             value={staffCode}
             onChange={(e) => setStaffCode(e.target.value)}
-            className="border border-gray-300 rounded-lg px-4 py-2 w-full mb-4 focus:ring-2 focus:ring-green-500 focus:outline-none"
+            className="border border-gray-300 rounded-lg px-4 py-2 w-full mb-4 focus:ring-2 focus:ring-blue-500 focus:outline-none"
           >
             <option value="">Select a staff member</option>
             {staffOptions.map((staff) => (
@@ -114,7 +114,7 @@ export const KeyManagement: React.FC = () => {
         <button
           onClick={generateAndDownloadP12}
           disabled={loading}
-          className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed w-full transition-colors"
+          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed w-full transition-colors"
         >
           {loading ? "Generating..." : "Generate & Download .p12"}
         </button>

@@ -101,6 +101,13 @@ export const Navbar: React.FC = () => {
                 Yêu cầu
               </Link>
 
+              <Link
+                to="/verify-diploma"
+                className={`border-transparent ${user?.role ? 'text-white/80 hover:text-white' : 'text-gray-500 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors`}
+              >
+                Xác minh bằng cấp
+              </Link>
+
               {user?.role === 'admin' && (
                 <>
                   <Link
@@ -191,6 +198,12 @@ export const Navbar: React.FC = () => {
             className={`block px-3 py-2 rounded-md text-base font-medium ${user?.role ? 'text-white hover:bg-white/20' : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'}`}
           >
             Yêu cầu
+          </Link>
+          <Link
+            to="/verify-diploma"
+            className={`block px-3 py-2 rounded-md text-base font-medium ${user?.role ? 'text-white hover:bg-white/20' : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'}`}
+          >
+            Xác minh bằng cấp
           </Link>
           <Link
             to="/profile"

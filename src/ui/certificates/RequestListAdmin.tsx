@@ -2,15 +2,16 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { useApi } from "../api";
 import { useNavigate } from "react-router-dom";
+import { CertificatePdfActions } from "./CertificatePdfActions";
 
 type CertificateRequest = {
   id: string;
-  studentId: string;
   templateId: string;
   requestType: string;
   status: string;
   reason?: string;
   adminNotes?: string;
+  requestCode?: string;
   directorNotes?: string;
   approvedBy?: string;
   directorApprovedBy?: string;
@@ -20,9 +21,15 @@ type CertificateRequest = {
   completedAt?: string;
   serialNo?: string;
   certificateId?: string;
+  studentRequestId?: string;
   studentName?: string;
-  studentCode?: string;
+  studentCode: string;
+  studentId?: string;
   templateName?: string;
+  // Thêm trường từ Certificate entity
+  pdfUri?: string;
+  pdfSha256?: string;
+  certId?: string;
 };
 
 export const RequestListAdmin: React.FC = () => {
@@ -62,43 +69,70 @@ export const RequestListAdmin: React.FC = () => {
       let url = `/api/certificate-requests?page=${currentPage}&size=20`;
       if (filterStatus) url += `&status=${filterStatus}`;
 
-      // Nếu là sinh viên thì gọi endpoint riêng
       if (user?.role === "STUDENT") {
         url = "/api/certificate-requests/my";
       }
 
-      console.log("📡 Loading requests from:", url, "| Role:", user?.role);
-
       const res = await apiCall(url);
       if (!res.ok) {
-        console.error(
-          "❌ Failed to load requests:",
-          res.status,
-          res.statusText
-        );
         setError(`Failed to load requests: ${res.status} ${res.statusText}`);
         return;
       }
 
       const data = await res.json();
-      console.log("✅ Received data:", data);
 
-      // Nếu là sinh viên → backend trả array
+      let requestsList: CertificateRequest[] = [];
       if (user?.role === "STUDENT") {
-        setRequests(Array.isArray(data) ? data : []);
+        requestsList = Array.isArray(data) ? data : [];
         setTotalPages(1);
       } else {
-        // Admin / Staff → backend trả Page object
-        setRequests(Array.isArray(data?.content) ? data.content : []);
+        requestsList = Array.isArray(data?.content) ? data.content : [];
         setTotalPages(data?.totalPages ?? 0);
       }
 
+      setRequests(requestsList);
       setError("");
+
+      // 🌟 Sau khi setRequests xong → load thông tin Certificate tương ứng
+      await loadCertificatesInfo(requestsList);
     } catch (err) {
-      console.error("⚠️ Error loading requests:", err);
       setError("Error loading requests: " + (err as Error).message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCertificatesInfo = async (requestsList: CertificateRequest[]) => {
+    try {
+      const updatedRequests = await Promise.all(
+        requestsList.map(async (req) => {
+          if (!req.certificateId) return req;
+
+          try {
+            // Gọi API để lấy thông tin Certificate theo certificateId
+            const res = await apiCall(`/api/certificates/${req.certificateId}`);
+            if (!res.ok) return req;
+
+            const certificate = await res.json();
+            return {
+              ...req,
+              pdfUri: certificate.pdfUri,
+              pdfSha256: certificate.pdfSha256,
+              certId: certificate.certId,
+              serialNo: certificate.serialNo || req.serialNo, // Ưu tiên serialNo từ Certificate
+            };
+          } catch (err) {
+            console.error(
+              `Failed to load Certificate info for ${req.certificateId}`,
+              err
+            );
+            return req;
+          }
+        })
+      );
+      setRequests(updatedRequests);
+    } catch (err) {
+      console.error("Failed to load certificates info", err);
     }
   };
 
@@ -124,7 +158,6 @@ export const RequestListAdmin: React.FC = () => {
       );
 
       if (res.ok) {
-        // Update local state
         setRequests((prev) =>
           prev.map((req) =>
             req.id === requestId
@@ -152,16 +185,19 @@ export const RequestListAdmin: React.FC = () => {
       setError("Vui lòng chọn file P12 và điền đầy đủ thông tin.");
       return;
     }
-
     setSigning(true);
     setError("");
     try {
       const formData = new FormData();
-      formData.append("studentcode", signModal.request.studentCode || "");
-      formData.append("staffcode", user?.id || "");
+      formData.append(
+        "studentCode",
+        signModal.request.studentRequestId || "SV001"
+      );
+      formData.append("staffCode", user?.staffCode || "");
       formData.append("p12File", p12File);
+      formData.append("requestCode", signModal.request.requestCode || "");
       formData.append("alias", alias);
-      formData.append("keystorepass", keystorePass);
+      formData.append("keystorePass", keystorePass);
 
       const res = await fetch("/api/v1/requests/sign", {
         method: "POST",
@@ -232,11 +268,11 @@ export const RequestListAdmin: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold text-blue-800 mb-2">
             {user?.role === "STUDENT"
               ? "Yêu Cầu Chứng Chỉ Của Tôi"
               : "Quản Lý Yêu Cầu Chứng Chỉ"}
@@ -296,10 +332,10 @@ export const RequestListAdmin: React.FC = () => {
 
         {/* Filters - Only show for admin/staff */}
         {user?.role !== "STUDENT" && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-300 p-6 mb-6">
             <div className="flex items-center space-x-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-blue-800 mb-2">
                   Lọc Theo Trạng Thái
                 </label>
                 <select
@@ -333,61 +369,66 @@ export const RequestListAdmin: React.FC = () => {
         )}
 
         {/* Requests Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-300 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-blue-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-blue-800 uppercase tracking-wider">
                     Yêu Cầu
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-blue-800 uppercase tracking-wider">
                     Sinh Viên
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-blue-800 uppercase tracking-wider">
                     Loại
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-blue-800 uppercase tracking-wider">
                     Trạng Thái
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-blue-800 uppercase tracking-wider">
                     Ngày Yêu Cầu
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-blue-800 uppercase tracking-wider">
                     Hành Động
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {requests.map((request) => (
-                  <tr key={request.id} className="hover:bg-gray-50">
+                  <tr key={request.id} className="hover:bg-blue-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-medium text-blue-800">
                           #{String(request.id).slice(-8)}
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-gray-600">
                           {request.templateName || request.templateId}
                         </div>
                         {request.serialNo && (
-                          <div className="text-sm text-gray-500 font-mono">
-                            {request.serialNo}
+                          <div className="text-sm text-gray-600 font-mono">
+                            Serial: {request.serialNo}
+                          </div>
+                        )}
+                        {request.certId && (
+                          <div className="text-xs text-blue-600 font-mono">
+                            Cert ID: {request.certId}
                           </div>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {request.studentName || request.studentId}
+                        <div className="text-sm font-medium text-blue-800">
+                          {request.studentName || request.studentRequestId}
                         </div>
-                        <div className="text-sm text-gray-500">
-                          {request.studentCode || request.studentId}
+                        <div className="text-sm text-gray-600">
+                          {request.studentCode || request.studentRequestId}
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-900">
+                      <span className="text-sm text-blue-800">
                         {getRequestTypeLabel(request.requestType)}
                       </span>
                     </td>
@@ -400,63 +441,67 @@ export const RequestListAdmin: React.FC = () => {
                         {request.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       {new Date(request.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        {user?.role === "STAFF" &&
-                          request.status === "PENDING" && (
-                            <>
+                      <div className="flex flex-col space-y-2">
+                        {/* Action buttons for staff */}
+                        <div className="flex space-x-2">
+                          {user?.role === "STAFF" &&
+                            request.status === "PENDING" && (
+                              <>
+                                <button
+                                  onClick={() =>
+                                    openReviewModal(request, "approve")
+                                  }
+                                  disabled={reviewingRequest === request.id}
+                                  className="text-green-600 hover:text-green-900 disabled:opacity-50 text-xs px-2 py-1 border border-green-600 rounded"
+                                >
+                                  Duyệt
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    openReviewModal(request, "reject")
+                                  }
+                                  disabled={reviewingRequest === request.id}
+                                  className="text-red-600 hover:text-red-900 disabled:opacity-50 text-xs px-2 py-1 border border-red-600 rounded"
+                                >
+                                  Từ Chối
+                                </button>
+                              </>
+                            )}
+                          {user?.role === "STAFF" &&
+                            request.status === "APPROVED" && (
                               <button
                                 onClick={() =>
-                                  openReviewModal(request, "approve")
+                                  setSignModal({ isOpen: true, request })
                                 }
-                                disabled={reviewingRequest === request.id}
-                                className="text-green-600 hover:text-green-900 disabled:opacity-50 mr-2"
+                                className="text-blue-600 hover:text-blue-900 text-xs px-2 py-1 border border-blue-600 rounded"
                               >
-                                Duyệt
+                                Ký Chứng Chỉ
                               </button>
-                              <button
-                                onClick={() =>
-                                  openReviewModal(request, "reject")
-                                }
-                                disabled={reviewingRequest === request.id}
-                                className="text-red-600 hover:text-red-900 disabled:opacity-50 mr-2"
-                              >
-                                Từ Chối
-                              </button>
-                            </>
-                          )}
-                        {user?.role === "STAFF" &&
-                          request.status === "APPROVED" && (
-                            <button
-                              onClick={() =>
-                                setSignModal({ isOpen: true, request })
-                              }
-                              className="text-blue-600 hover:text-blue-900"
-                            >
-                              Ký Chứng Chỉ
-                            </button>
-                          )}
+                            )}
+                        </div>
 
-                        {request.certificateId && (
-                          <div className="flex space-x-2">
-                            <a
-                              href={`/certificates/${request.certificateId}`}
-                              className="text-blue-600 hover:text-blue-900"
-                            >
-                              Xem Chứng Chỉ
-                            </a>
-                            <a
-                              href={`/api/certificates/download/${request.certificateId}`}
-                              download={`certificate_${
-                                request.serialNo || request.certificateId
-                              }.pdf`}
-                              className="text-green-600 hover:text-green-900"
-                            >
-                              Tải PDF
-                            </a>
+                        {/* PDF View/Download buttons - Show when certificate is available */}
+                        {request.certificateId &&
+                          request.certId &&
+                          request.studentCode && (
+                            <div className="mt-2">
+                              <CertificatePdfActions
+                                certId={request.certId}
+                                studentCode={request.studentCode}
+                                className="w-full"
+                                viewButtonText="Xem PDF"
+                                buttonSize="sm"
+                              />
+                            </div>
+                          )}
+                        {/* Show PDF status */}
+                        {request.pdfUri && (
+                          <div className="text-xs text-gray-500">
+                            📄 PDF đã sẵn sàng
                           </div>
                         )}
                       </div>
@@ -502,14 +547,14 @@ export const RequestListAdmin: React.FC = () => {
         {/* Pagination - Only show for admin/staff */}
         {user?.role !== "STUDENT" && totalPages > 1 && (
           <div className="mt-6 flex items-center justify-between">
-            <div className="text-sm text-gray-700">
+            <div className="text-sm text-blue-800">
               Page {currentPage + 1} of {totalPages}
             </div>
             <div className="flex space-x-2">
               <button
                 onClick={() => setCurrentPage((prev) => Math.max(0, prev - 1))}
                 disabled={currentPage === 0}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-50"
               >
                 Trước
               </button>
@@ -518,7 +563,7 @@ export const RequestListAdmin: React.FC = () => {
                   setCurrentPage((prev) => Math.min(totalPages - 1, prev + 1))
                 }
                 disabled={currentPage === totalPages - 1}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-50"
               >
                 Tiếp
               </button>
@@ -538,12 +583,8 @@ export const RequestListAdmin: React.FC = () => {
                 <div className="mb-4">
                   <p className="text-sm text-gray-600">
                     <strong>Sinh Viên:</strong>{" "}
-                    {reviewModal.request.studentName ||
-                      reviewModal.request.studentId}{" "}
-                    (
-                    {reviewModal.request.studentCode ||
-                      reviewModal.request.studentId}
-                    )
+                    {reviewModal.request.studentRequestId ||
+                      reviewModal.request.studentCode}
                   </p>
                   <p className="text-sm text-gray-600">
                     <strong>Loại:</strong>{" "}
@@ -555,7 +596,6 @@ export const RequestListAdmin: React.FC = () => {
                     </p>
                   )}
                 </div>
-                {/* Admin notes removed for now */}
                 <div className="flex justify-end space-x-3">
                   <button
                     onClick={() =>
@@ -570,13 +610,9 @@ export const RequestListAdmin: React.FC = () => {
                     Cancel
                   </button>
                   <button
-                    onClick={() => {
-                      handleReview(
-                        reviewModal.request!.id,
-                        reviewModal.action!,
-                        null
-                      );
-                    }}
+                    onClick={() =>
+                      handleReview(reviewModal.request!.id, reviewModal.action!)
+                    }
                     disabled={reviewingRequest === reviewModal.request.id}
                     className={`px-4 py-2 rounded-lg text-white ${
                       reviewModal.action === "approve"
@@ -595,13 +631,16 @@ export const RequestListAdmin: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Sign Modal */}
         {signModal.isOpen && signModal.request && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
             <div className="bg-white p-6 rounded shadow-md w-96">
               <h2 className="text-lg font-bold mb-4">Ký Chứng Chỉ</h2>
               <p className="mb-2">
-                Sinh viên: {signModal.request.studentName} (
-                {signModal.request.studentCode})
+                Sinh viên:{" "}
+                {signModal.request.studentRequestId ||
+                  signModal.request.studentCode}
               </p>
               <div className="mb-2">
                 <label className="block text-sm">File P12:</label>

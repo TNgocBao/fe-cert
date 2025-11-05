@@ -40,12 +40,12 @@ export const UserProfile: React.FC = () => {
   const loadProfile = async () => {
     try {
       setLoading(true);
-      console.log('🔍 Loading user profile...');
+      console.log('Loading user profile...');
       const res = await apiCall('/api/users/profile');
-      console.log('📡 Profile API response:', res.status, res.statusText);
+      console.log(' Profile API response:', res.status, res.statusText);
       if (res.ok) {
         const data = await res.json();
-        console.log('✅ Profile data received:', data);
+        console.log('Profile data received:', data);
         setProfile(data);
         setEditForm({
           name: data.name || '',
@@ -53,11 +53,11 @@ export const UserProfile: React.FC = () => {
           phone: data.phone || ''
         });
       } else {
-        console.error('❌ Failed to load profile:', res.status, res.statusText);
+        console.error('Failed to load profile:', res.status, res.statusText);
         setError('Không thể tải thông tin hồ sơ');
       }
     } catch (err) {
-      console.error('💥 Error loading profile:', err);
+      console.error(' Error loading profile:', err);
       setError('Lỗi khi tải thông tin hồ sơ');
     } finally {
       setLoading(false);
@@ -68,27 +68,27 @@ export const UserProfile: React.FC = () => {
     e.preventDefault();
     try {
       setLoading(true);
-      console.log('📝 Updating profile with data:', editForm);
+      console.log(' Updating profile with data:', editForm);
       const res = await apiCall('/api/users/profile', {
         method: 'PUT',
         body: JSON.stringify(editForm)
       });
 
-      console.log('📡 Update profile response:', res.status, res.statusText);
+      console.log(' Update profile response:', res.status, res.statusText);
       if (res.ok) {
         const updatedProfile = await res.json();
-        console.log('✅ Profile updated successfully:', updatedProfile);
+        console.log(' Profile updated successfully:', updatedProfile);
         setProfile(updatedProfile);
         setIsEditing(false);
         setError('');
         // Reload profile to ensure fresh data
         await loadProfile();
       } else {
-        console.error('❌ Failed to update profile:', res.status, res.statusText);
+        console.error(' Failed to update profile:', res.status, res.statusText);
         setError('Không thể cập nhật hồ sơ');
       }
     } catch (err) {
-      console.error('💥 Error updating profile:', err);
+      console.error(' Error updating profile:', err);
       setError('Lỗi khi cập nhật hồ sơ');
     } finally {
       setLoading(false);

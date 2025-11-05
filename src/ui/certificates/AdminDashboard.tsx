@@ -113,8 +113,7 @@ export const AdminDashboard: React.FC = () => {
                 <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-teal-500 rounded-xl flex items-center justify-center shadow-lg">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
+                </svg>
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500">Active Staff</p>
@@ -242,23 +241,23 @@ export const AdminDashboard: React.FC = () => {
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Thông Tin Hệ Thống</h2>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Người Dùng Hiện Tại:</span>
+                <span className="text-sm text-gray-600">Người Dùng Hiện Tại:</span>
                 <span className="text-sm font-medium text-gray-900">{user?.username}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Vai Trò:</span>
+                <span className="text-sm text-gray-600">Vai Trò:</span>
                 <span className="text-sm font-medium text-blue-600">{user?.role}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Cập Nhật Cuối:</span>
+                <span className="text-sm text-gray-600">Cập Nhật Cuối:</span>
                 <span className="text-sm font-medium text-gray-900">{new Date().toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Trạng Thái API:</span>
+                <span className="text-sm text-gray-600">Trạng Thái API:</span>
                 <span className="text-sm font-medium text-green-600">Đã Kết Nối</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Cơ Sở Dữ Liệu:</span>
+                <span className="text-sm text-gray-600">Cơ Sở Dữ Liệu:</span>
                 <span className="text-sm font-medium text-green-600">Hoạt Động Tốt</span>
               </div>
             </div>
@@ -266,6 +265,6 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </div>
     </div>
+    </div>
   );
 };
-

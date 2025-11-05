@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../AuthContext';
 import { useApi } from '../api';
 import { useNavigate, useParams } from 'react-router-dom';
+import { CertificatePdfActions } from './CertificatePdfActions';
 
 type Certificate = {
   id: string;
@@ -32,7 +33,7 @@ const CertificatePdfViewer: React.FC<{ certificateId: string; pdfUri?: string }>
   React.useEffect(() => {
     const checkPdfExists = async () => {
       try {
-        const res = await fetch(`/api/certificates/${certificateId}/pdf-exists`);
+        const res = await fetch(`/api/${certificateId}/pdf-exists`);
         if (res.ok) {
           const data = await res.json();
           setPdfExists(data.exists);
@@ -63,7 +64,7 @@ const CertificatePdfViewer: React.FC<{ certificateId: string; pdfUri?: string }>
   if (pdfExists) {
     return (
       <iframe
-        src={`/api/certificates/${certificateId}/pdf`}
+        src={`/api/${certificateId}/pdf`}
         className="w-full h-full border-0"
         title="Certificate PDF"
         onError={() => setPdfExists(false)}
@@ -110,7 +111,7 @@ export const CertificateView: React.FC = () => {
 
     try {
       setLoading(true);
-      const res = await apiCall(`/api/certificates/${id}`);
+      const res = await apiCall(`/api/${id}`);
       if (res.ok) {
         const data = await res.json();
         setCertificate(data);
@@ -372,24 +373,18 @@ export const CertificateView: React.FC = () => {
               <div className="aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden mb-4">
                 <CertificatePdfViewer certificateId={certificate.id} pdfUri={certificate.pdfUri} />
               </div>
-              <div className="space-y-2">
-                <a
-                  href={`/api/certificates/${certificate.id}/pdf`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Open PDF in New Tab
-                </a>
-                {!certificate.pdfUri && (
-                  <p className="text-xs text-gray-500 text-center">
-                    Note: PDF may not be available if certificate hasn't been fully processed
-                  </p>
-                )}
-              </div>
+              {/* <CertificatePdfActions
+                                    certId={cert.certId} 
+                                    studentCode={cert.studentCode} 
+                                    className="w-full"
+                                    viewButtonText="Xem PDF"
+                                    buttonSize="sm"
+                                  /> */}
+              {!certificate.pdfUri && (
+                <p className="text-xs text-gray-500 text-center mt-2">
+                  Lưu ý: PDF có thể chưa sẵn sàng nếu chứng chỉ chưa được xử lý hoàn tất
+                </p>
+              )}
             </div>
           </div>
         </div>

@@ -128,11 +128,11 @@ export const UserManagement: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8 animate-fade-in">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
+          <h1 className="text-4xl font-bold text-blue-800 mb-2">
             Quản lý người dùng
           </h1>
           <p className="text-gray-600 text-lg">Quản lý tài khoản nhân viên và sinh viên</p>
@@ -152,14 +152,14 @@ export const UserManagement: React.FC = () => {
 
         {/* Tabs */}
         <div className="mb-6">
-          <div className="border-b border-gray-200">
+          <div className="border-b border-gray-300">
             <nav className="-mb-px flex space-x-8">
               <button
                 onClick={() => setActiveTab('staff')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'staff'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-blue-600 text-blue-800'
+                    : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'
                 }`}
               >
                 Nhân viên ({staff.length})
@@ -168,8 +168,8 @@ export const UserManagement: React.FC = () => {
                 onClick={() => setActiveTab('students')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'students'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-blue-600 text-blue-800'
+                    : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'
                 }`}
               >
                 Sinh viên ({students.length})
@@ -180,9 +180,9 @@ export const UserManagement: React.FC = () => {
 
         {/* Staff Tab */}
         {activeTab === 'staff' && (
-          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+          <div className="bg-white rounded-xl shadow-lg border border-gray-300 p-6">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">Danh sách nhân viên</h2>
+              <h2 className="text-xl font-semibold text-blue-800">Danh sách nhân viên</h2>
               <button
                 onClick={() => setShowStaffForm(!showStaffForm)}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -193,11 +193,11 @@ export const UserManagement: React.FC = () => {
 
             {/* Staff Creation Form */}
             {showStaffForm && (
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Tạo tài khoản nhân viên mới</h3>
+              <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+                <h3 className="text-lg font-medium text-blue-800 mb-4">Tạo tài khoản nhân viên mới</h3>
                 <form onSubmit={handleCreateStaff} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-blue-800 mb-1">
                       Tên đăng nhập *
                     </label>
                     <input
@@ -209,7 +209,7 @@ export const UserManagement: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-blue-800 mb-1">
                       Mật khẩu *
                     </label>
                     <input
@@ -221,7 +221,7 @@ export const UserManagement: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-blue-800 mb-1">
                       Họ và tên *
                     </label>
                     <input
@@ -233,7 +233,7 @@ export const UserManagement: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-blue-800 mb-1">
                       Email
                     </label>
                     <input
@@ -244,7 +244,7 @@ export const UserManagement: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-blue-800 mb-1">
                       Số điện thoại
                     </label>
                     <input
@@ -255,7 +255,7 @@ export const UserManagement: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-blue-800 mb-1">
                       Mã nhân viên
                     </label>
                     <input
@@ -298,42 +298,42 @@ export const UserManagement: React.FC = () => {
             ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-blue-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-blue-800 uppercase tracking-wider">
                         Thông tin
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-blue-800 uppercase tracking-wider">
                         Liên hệ
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-blue-800 uppercase tracking-wider">
                         Trạng thái
                       </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {staff.map((s) => (
-                      <tr key={s.id} className="hover:bg-gray-50">
+                      <tr key={s.id} className="hover:bg-blue-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div>
-                            <div className="text-sm font-medium text-gray-900">{s.fullName}</div>
-                            <div className="text-sm text-gray-500">@{s.username}</div>
+                            <div className="text-sm font-medium text-blue-800">{s.fullName}</div>
+                            <div className="text-sm text-gray-600">@{s.username}</div>
                             {s.staffCode && (
-                              <div className="text-sm text-gray-500">Mã: {s.staffCode}</div>
+                              <div className="text-sm text-gray-600">Mã: {s.staffCode}</div>
                             )}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{s.email}</div>
+                          <div className="text-sm text-blue-800">{s.email}</div>
                           {s.phone && (
-                            <div className="text-sm text-gray-500">{s.phone}</div>
+                            <div className="text-sm text-gray-600">{s.phone}</div>
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             s.status
                               ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
+                              : 'bg-gray-100 text-gray-800'
                           }`}>
                             {s.status ? 'Hoạt động' : 'Không hoạt động'}
                           </span>
@@ -349,9 +349,9 @@ export const UserManagement: React.FC = () => {
 
         {/* Students Tab */}
         {activeTab === 'students' && (
-          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+          <div className="bg-white rounded-xl shadow-lg border border-gray-300 p-6">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">Danh sách sinh viên</h2>
+              <h2 className="text-xl font-semibold text-blue-800">Danh sách sinh viên</h2>
             </div>
 
             {loading ? (
@@ -366,37 +366,37 @@ export const UserManagement: React.FC = () => {
             ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-blue-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-blue-800 uppercase tracking-wider">
                         Thông tin
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-blue-800 uppercase tracking-wider">
                         Ngành học
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-blue-800 uppercase tracking-wider">
                         Trạng thái
                       </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {students.map((s) => (
-                      <tr key={s.id} className="hover:bg-gray-50">
+                      <tr key={s.id} className="hover:bg-blue-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div>
-                            <div className="text-sm font-medium text-gray-900">{s.fullName}</div>
-                            <div className="text-sm text-gray-500">@{s.username}</div>
-                            <div className="text-sm text-gray-500">Mã: {s.studentCode}</div>
+                            <div className="text-sm font-medium text-blue-800">{s.fullName}</div>
+                            <div className="text-sm text-gray-600">@{s.username}</div>
+                            <div className="text-sm text-gray-600">Mã: {s.studentCode}</div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{s.majorName}</div>
+                          <div className="text-sm text-blue-800">{s.majorName}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             s.status
                               ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
+                              : 'bg-gray-100 text-gray-800'
                           }`}>
                             {s.status ? 'Hoạt động' : 'Không hoạt động'}
                           </span>

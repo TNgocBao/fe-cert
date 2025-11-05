@@ -39,7 +39,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-
+  // console.log(user?.xepLoai);
   useEffect(() => {
     // Check for stored token on app load
     const storedToken = localStorage.getItem('authToken');

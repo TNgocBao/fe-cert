@@ -18,6 +18,7 @@ import { KeyManagement } from './certificates/KeyManagement';
 import { StaffDashboard } from './certificates/StaffDashboard';
 import { UserManagement } from './certificates/UserManagement';
 import { UserProfile } from './certificates/UserProfile';
+import VerifyDiploma from './certificates/VerifyDiploma';
 const AppRoutes: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
   // console.log('Current User:', user?.role);
@@ -132,6 +133,16 @@ const AppRoutes: React.FC = () => {
           <ProtectedRoute>
             <Layout>
               <UserProfile />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/verify-diploma"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <VerifyDiploma />
             </Layout>
           </ProtectedRoute>
         }

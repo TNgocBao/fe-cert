@@ -42,14 +42,20 @@ export const StudentDashboard: React.FC = () => {
     try {
       setLoading(true);
 
-      // Load certificates
-      const certRes = await apiCall('/api/certificates/my?page=0&size=5');
-      if (certRes.ok) {
-        const certData = await certRes.json();
-        setRecentCertificates(certData.content || []);
+      // Load certificates for current user
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const studentCode = user.username || user.studentCode;
 
+      const certRes = await apiCall(`/api/${studentCode}/certificates?page=0&size=5`);
+      if (certRes.ok) {
+        const apiResponse = await certRes.json();
+        console.log('Recent certificates response:', apiResponse);
+        // The response is wrapped in ApiResponse format
+        const certData = apiResponse.data;
+        setRecentCertificates(certData ? certData.content || [] : []);
+        console.log('Recent certificates:', certData ? certData.content : []);
         // Calculate stats
-        const allCerts = certData.content || [];
+        const allCerts = certData ? certData.content || [] : [];
         const now = new Date();
         const expiringSoon = allCerts.filter((cert: Certificate) => {
           if (!cert.expireAt) return false;
@@ -313,6 +319,17 @@ export const StudentDashboard: React.FC = () => {
                       <span className="text-sm text-gray-500">
                         {new Date(cert.issuedAt).toLocaleDateString()}
                       </span>
+                      {cert.status === 'ISSUED' && (
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            onClick={() => window.open(`/api/${cert.id}/pdf`, '_blank')}
+                            className="inline-flex items-center px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors"
+                          >
+                            Xem PDF
+                          </button>
+
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
