@@ -5,19 +5,19 @@ import { Login } from './auth/Login';
 import { Register } from './auth/Register';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { Layout } from './Layout';
-import { CertificateListUser } from './certificates/CertificateListUser';
-import { CertificateListAdmin } from './certificates/CertificateListAdmin';
+import { CertificateListStudent } from './certificates/CertificateListStudent';
+import { CertificateListAdmin } from './admin/CertificateListAdmin';
 import { CertificateEdit } from './certificates/CertificateEdit';
 import { CertificateView } from './certificates/CertificateView';
-import { AdminDashboard } from './certificates/AdminDashboard';
-import { RequestCreate } from './certificates/RequestCreate';
-import { StudentDashboard } from './certificates/StudentDashboard';
-import { RequestListAdmin } from './certificates/RequestListAdmin';
-import { StudentRequestList } from './certificates/StudentRequestList';
-import { KeyManagement } from './certificates/KeyManagement';
-import { StaffDashboard } from './certificates/StaffDashboard';
-import { UserManagement } from './certificates/UserManagement';
-import { UserProfile } from './certificates/UserProfile';
+import { AdminDashboard } from './admin/AdminDashboard';
+import { StudentDashboard } from './student/StudentDashboard';
+import { KeyManagement } from './admin/KeyManagement';
+import { StaffDashboard } from './staff/StaffDashboard';
+import { UserManagement } from './student/UserManagement';
+import { UserProfile } from './student/UserProfile';
+import { StudentManagementAdmin } from './admin/StudentManagementAdmin';
+import { StudentManagementStaff } from './staff/StudentManagementStaff';
+import { StudentResultsPage } from './student/StudentResultsPage';
 import VerifyDiploma from './certificates/VerifyDiploma';
 const AppRoutes: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
@@ -39,40 +39,29 @@ const AppRoutes: React.FC = () => {
             <Layout>
               {user?.role === 'ADMIN' ? <AdminDashboard /> :
                user?.role === 'STAFF' ? <StaffDashboard /> :
-               <CertificateListUser />}
+               <StudentDashboard />}
             </Layout>
           </ProtectedRoute>
         }
       />
+      <Route   
+        path='/results'
+        element={
+          <ProtectedRoute>
+            <Layout>
+              {user?.role === 'STUDENT' ? <StudentResultsPage /> : <Navigate to="/" replace />}
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
       <Route
         path="/certificates"
         element={
           <ProtectedRoute>
             <Layout>
               {user?.role === 'ADMIN' ? <CertificateListAdmin /> :
-               user?.role === 'STAFF' ? <Navigate to="/certificates/requests" replace /> :
-               <CertificateListUser />}
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/certificates/requests"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              {user?.role === 'ADMIN' || user?.role === 'STAFF' ? <RequestListAdmin /> :
-               <StudentRequestList />}
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/certificates/requests/my"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <StudentRequestList />
+               <CertificateListStudent />}
             </Layout>
           </ProtectedRoute>
         }
@@ -98,11 +87,13 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/certificates/requests/create"
+        path="/students"
         element={
           <ProtectedRoute>
             <Layout>
-              {user?.role === 'STUDENT' ? <RequestCreate /> : <Navigate to="/certificates/requests" replace />}
+              {user?.role === 'ADMIN' ? <StudentManagementAdmin /> :
+               user?.role === 'STAFF' ? <StudentManagementStaff /> :
+               <Navigate to="/" replace />}
             </Layout>
           </ProtectedRoute>
         }

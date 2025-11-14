@@ -49,7 +49,7 @@ export const CertificateCreate: React.FC = () => {
 
   const loadStudents = async () => {
     try {
-      const res = await apiCall('/api/students');
+      const res = await apiCall('/api/users/students');
       if (res.ok) {
         const data = await res.json();
         setStudents(data || []);
@@ -66,14 +66,16 @@ export const CertificateCreate: React.FC = () => {
     setSuccess('');
 
     try {
-      const res = await apiCall('/api/certificates', {
+      const res = await apiCall('/api/cert', {
         method: 'POST',
-        body: JSON.stringify(form)
+        body: JSON.stringify({
+          studentId: form.studentId,
+          password: '123456' // Default password for certificate creation
+        })
       });
 
       if (res.ok) {
-        const data = await res.json();
-        setSuccess(`Certificate created successfully! ID: ${data.id}`);
+        setSuccess('Certificate created successfully!');
         // Reset form
         setForm({
           studentId: '',
@@ -88,8 +90,8 @@ export const CertificateCreate: React.FC = () => {
           navigate('/certificates');
         }, 2000);
       } else {
-        const errorData = await res.json();
-        setError(errorData.message || 'Failed to create certificate');
+        const errorText = await res.text();
+        setError(`Failed to create certificate: ${errorText}`);
       }
     } catch (err) {
       setError('Error creating certificate');

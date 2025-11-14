@@ -19,26 +19,20 @@ export const CertificatePdfActions: React.FC<CertificatePdfActionsProps> = ({
   buttonSize = 'sm',
   baseUrl = '/api',
 }) => {
-    console.log(studentCode);
-    console.log(certId);
+   
   const viewPdf = async () => {
-    console.log('=== VIEW PDF ===');
-    console.log('certId:', certId);
-    console.log('studentCode:', studentCode);
-    
+   
     // Trim values để tránh lỗi khoảng cách
     const trimmedCertId = certId?.trim();
     const trimmedStudentCode = studentCode?.trim();
     
     if (!trimmedCertId || !trimmedStudentCode) {
-      console.error('Thiếu certId hoặc studentCode');
       alert('Thiếu thông tin để xem chứng chỉ');
       return;
     }
 
     try {
       const url = `${baseUrl}/certificates/${trimmedCertId}/view`;
-      console.log('Request URL:', url);
       
       const response = await fetch(url, {
         method: 'POST',
@@ -50,15 +44,12 @@ export const CertificatePdfActions: React.FC<CertificatePdfActionsProps> = ({
         }),
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
+      
 
       if (response.ok) {
         // Tạo blob từ response và mở trong tab mới
         const blob = await response.blob();
-        console.log('Blob type:', blob.type);
-        console.log('Blob size:', blob.size);
-        
+      
         if (blob.size === 0) {
           throw new Error('PDF trống hoặc không tồn tại');
         }
@@ -80,7 +71,6 @@ export const CertificatePdfActions: React.FC<CertificatePdfActionsProps> = ({
       } else {
         // Xử lý lỗi HTTP
         const errorText = await response.text();
-        console.error('Server error:', errorText);
         
         if (response.status === 404) {
           throw new Error('Không tìm thấy chứng chỉ hoặc file PDF');
@@ -91,7 +81,6 @@ export const CertificatePdfActions: React.FC<CertificatePdfActionsProps> = ({
         }
       }
     } catch (err) {
-      console.error('Error viewing PDF:', err);
       alert('Lỗi khi xem PDF: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
   };

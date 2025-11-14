@@ -5,17 +5,16 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { CertificatePdfActions } from './CertificatePdfActions';
 
 type Certificate = {
-  id: string;
+  id: number;
   certId: string;
   templateId: string;
   studentId: string;
-  issuedAt: string;
-  expireAt?: string;
+  issued_at: string;
+  expire_at?: string;
   status: string;
-  serialNo: string;
-  certificate: string;
-  pdfUri?: string;
-  pdfSha256?: string;
+  serial_no: string;
+  pdf_uri?: string;
+  pdf_sha256?: string;
 };
 
 type Student = {
@@ -118,29 +117,32 @@ export const CertificateView: React.FC = () => {
 
         // Load student info - this might not exist, so handle gracefully
         try {
-          const studentRes = await apiCall(`/api/students/${data.studentId}`);
+          const studentRes = await apiCall('/api/users/students');
           if (studentRes.ok) {
-            const studentData = await studentRes.json();
-            setStudent(studentData);
+            const allStudents = await studentRes.json();
+            // Find student by studentCode or id
+            const foundStudent = allStudents.find((s: any) =>
+              s.studentCode === data.studentId || s.id?.toString() === data.studentId
+            );
+            if (foundStudent) {
+              setStudent(foundStudent);
+            }
           }
         } catch (err) {
           // Student info not available, that's okay
           console.log('Student info not available');
         }
 
-        // Check validity - these endpoints might not exist, so handle gracefully
-        try {
-          const validityRes = await apiCall(`/api/certificates/${id}/valid`);
-          const daysRes = await apiCall(`/api/certificates/${id}/days-until-expiration`);
-
-          if (validityRes.ok && daysRes.ok) {
-            const isValid = await validityRes.json();
-            const daysUntilExpiration = await daysRes.json();
-            setValidityInfo({ isValid, daysUntilExpiration });
-          }
-        } catch (err) {
-          // Validity endpoints not available, that's okay
-          console.log('Validity check not available');
+        // Check validity - these endpoints don't exist in backend, so remove them
+        // Backend doesn't have validity endpoints, so we'll just show basic info
+        if (data.expire_at) {
+          const expirationDate = new Date(data.expire_at);
+          const now = new Date();
+          const daysUntilExpiration = Math.ceil((expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          const isValid = daysUntilExpiration > 0 && data.status === 'ACTIVE';
+          setValidityInfo({ isValid, daysUntilExpiration });
+        } else {
+          setValidityInfo({ isValid: data.status === 'ACTIVE', daysUntilExpiration: 9999 });
         }
       } else if (res.status === 404) {
         setError('Certificate not found');
@@ -275,7 +277,7 @@ export const CertificateView: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500">Serial Number</label>
-                  <p className="mt-1 text-sm text-gray-900 font-mono">{certificate.serialNo}</p>
+                  <p className="mt-1 text-sm text-gray-900 font-mono">{certificate.serial_no}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500">Template ID</label>
@@ -289,12 +291,12 @@ export const CertificateView: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500">Issue Date</label>
-                  <p className="mt-1 text-sm text-gray-900">{new Date(certificate.issuedAt).toLocaleDateString()}</p>
+                  <p className="mt-1 text-sm text-gray-900">{new Date(certificate.issued_at).toLocaleDateString()}</p>
                 </div>
-                {certificate.expireAt && (
+                {certificate.expire_at && (
                   <div>
                     <label className="block text-sm font-medium text-gray-500">Expiration Date</label>
-                    <p className="mt-1 text-sm text-gray-900">{new Date(certificate.expireAt).toLocaleDateString()}</p>
+                    <p className="mt-1 text-sm text-gray-900">{new Date(certificate.expire_at).toLocaleDateString()}</p>
                   </div>
                 )}
               </div>
@@ -344,22 +346,22 @@ export const CertificateView: React.FC = () => {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Technical Details</h2>
               <div className="space-y-3">
-                {certificate.pdfUri && (
+                {certificate.pdf_uri && (
                   <div>
                     <label className="block text-sm font-medium text-gray-500">PDF URI</label>
-                    <p className="mt-1 text-sm text-gray-900 font-mono break-all">{certificate.pdfUri}</p>
+                    <p className="mt-1 text-sm text-gray-900 font-mono break-all">{certificate.pdf_uri}</p>
                   </div>
                 )}
-                {certificate.pdfSha256 && (
+                {certificate.pdf_sha256 && (
                   <div>
                     <label className="block text-sm font-medium text-gray-500">PDF SHA256 Hash</label>
-                    <p className="mt-1 text-sm text-gray-900 font-mono break-all">{certificate.pdfSha256}</p>
+                    <p className="mt-1 text-sm text-gray-900 font-mono break-all">{certificate.pdf_sha256}</p>
                   </div>
                 )}
                 <div>
                   <label className="block text-sm font-medium text-gray-500">Certificate Data</label>
                   <p className="mt-1 text-sm text-gray-500">
-                    Base64 encoded PDF ({certificate.certificate.length} characters)
+                    Base64 encoded PDF 
                   </p>
                 </div>
               </div>
@@ -371,7 +373,7 @@ export const CertificateView: React.FC = () => {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Certificate PDF</h2>
               <div className="aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden mb-4">
-                <CertificatePdfViewer certificateId={certificate.id} pdfUri={certificate.pdfUri} />
+                <CertificatePdfViewer certificateId={certificate.certId} pdfUri={certificate.pdf_uri} />
               </div>
               {/* <CertificatePdfActions
                                     certId={cert.certId} 
@@ -380,7 +382,7 @@ export const CertificateView: React.FC = () => {
                                     viewButtonText="Xem PDF"
                                     buttonSize="sm"
                                   /> */}
-              {!certificate.pdfUri && (
+              {!certificate.pdf_uri && (
                 <p className="text-xs text-gray-500 text-center mt-2">
                   Lưu ý: PDF có thể chưa sẵn sàng nếu chứng chỉ chưa được xử lý hoàn tất
                 </p>

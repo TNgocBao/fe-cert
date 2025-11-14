@@ -5,21 +5,18 @@ import { useNavigate } from 'react-router-dom';
 import { CertificatePdfActions } from './CertificatePdfActions';
 
 type Certificate = {
-  id: string;
+  id: number;
   certId: string;
-  templateId: string;
   studentCode: string;
-  issuedAt: string;
+  issueAt: string;
   expireAt?: string;
   status: string;
-  serialNo: string;
-  certificate: string;
+  serialNumber: string;
   pdfUri?: string;
   pdfSha256?: string;
-  serialNumber?: string;
 };
 
-export const CertificateListUser: React.FC = () => {
+export const CertificateListStudent: React.FC = () => {
   const { user } = useAuth();
   const { apiCall } = useApi();
   const navigate = useNavigate();
@@ -48,11 +45,9 @@ export const CertificateListUser: React.FC = () => {
       if (res.ok) {
         const apiResponse = await res.json();
         console.log('Certificate data received:', apiResponse);
-        // The response is wrapped in ApiResponse format
-        const data = apiResponse.data;
-        setCertificates(data ? data.content || [] : []);
+        setCertificates(apiResponse.data.content || []);
         setError('');
-        console.log('Certificates array:', data ? data.content : []);
+        console.log('Certificates array:', apiResponse.data.content || []);
       } else {
         const errorText = await res.text();
         console.error('API Error:', res.status, errorText);
@@ -79,10 +74,10 @@ export const CertificateListUser: React.FC = () => {
     }
   };
 
-  const getDaysUntilExpiration = (expireAt?: string) => {
-    if (!expireAt) return null;
+  const getDaysUntilExpiration = (expire_at?: string) => {
+    if (!expire_at) return null;
     const today = new Date();
-    const expireDate = new Date(expireAt);
+    const expireDate = new Date(expire_at);
     const diffTime = expireDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
@@ -129,12 +124,12 @@ export const CertificateListUser: React.FC = () => {
               </svg>
             </div>
             <h3 className="mt-4 text-lg font-medium text-gray-900">Không tìm thấy chứng chỉ nào</h3>
-            <p className="mt-2 text-gray-500">Bạn chưa được cấp chứng chỉ nào. Hãy tạo yêu cầu chứng chỉ mới.</p>
+            <p className="mt-2 text-gray-500">Bạn chưa được cấp chứng chỉ nào.</p>
             <button
-              onClick={() => navigate('/certificates/requests/create')}
+              onClick={() => navigate('/')}
               className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              Tạo Yêu Cầu Chứng Chỉ
+              Quay về trang chủ
             </button>
           </div>
         ) : (
@@ -167,23 +162,23 @@ export const CertificateListUser: React.FC = () => {
                     {/* Certificate Info */}
                     <div className="space-y-3">
                       <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-1">{cert.serialNo}</h3>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1">{cert.serialNumber}</h3>
                         <p className="text-sm text-gray-500">Certificate ID: {cert.certId || cert.id}</p>
                       </div>
 
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
                           <span className="text-gray-500">Mẫu:</span>
-                          <span className="font-medium">{cert.templateId}</span>
+                          <span className="font-medium">{cert.id}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-500">Ngày cấp:</span>
-                          <span className="font-medium">{new Date(cert.issuedAt).toLocaleDateString()}</span>
+                          <span className="font-medium">{new Date(cert?.issueAt).toLocaleDateString()}</span>
                         </div>
-                        {cert.expireAt && (
+                        {cert?.expireAt && (
                           <div className="flex justify-between">
                             <span className="text-gray-500">Ngày hết hạn:</span>
-                            <span className="font-medium">{new Date(cert.expireAt).toLocaleDateString()}</span>
+                            <span className="font-medium">{new Date(cert?.expireAt).toLocaleDateString()}</span>
                           </div>
                         )}
                       </div>
@@ -192,8 +187,8 @@ export const CertificateListUser: React.FC = () => {
                     {/* Actions */}
                     <div className="mt-6 pt-4 border-t border-gray-100">
                       <CertificatePdfActions
-                        certId={cert.certId} 
-                        studentCode={cert.studentCode} 
+                        certId={cert.certId}
+                        studentCode={cert.studentCode}
                         className="w-full"
                         viewButtonText="Xem PDF"
                         buttonSize="sm"

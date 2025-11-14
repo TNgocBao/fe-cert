@@ -1,26 +1,24 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { useApi } from "../api";
-import { CertificatePdfActions } from "./CertificatePdfActions";
+import { CertificatePdfActions } from "../certificates/CertificatePdfActions";
 
 type Certificate = {
-  id: string;
+  id: number;
   certId: string;
   templateId: string;
   studentId: string;
-  issuedAt: string;
-  expireAt?: string;
+  issued_at: string;
+  expire_at?: string;
   status: string;
-  serialNo: string;
-  certificate: string;
-  studentCode: string;
+  serialNumber: string;
   pdfUri?: string;
   pdfSha256?: string;
 };
 
 type Student = {
-  id: string;
-  name: string;
+  id: number;
+  fullName: string;
   studentCode: string;
   xepLoai?: string;
 };
@@ -32,22 +30,22 @@ export const CertificateListAdmin: React.FC = () => {
   const [students, setStudents] = useState<Map<string, Student>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
-  const [filterStatus, setFilterStatus] = useState<string>("");
-  const [filterTemplate, setFilterTemplate] = useState<string>("");
+  const [filterStudentId, setFilterStudentId] = useState<string>("");
+
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   useEffect(() => {
     loadCertificates();
-  }, [filterStatus, filterTemplate, currentPage]);
+  }, [filterStudentId, currentPage]);
 
   const loadCertificates = async () => {
     try {
       setLoading(true);
       let url = `/api/certificates?page=${currentPage}&size=20`;
-      if (filterStatus) url += `&status=${filterStatus}`;
-      if (filterTemplate) url += `&templateId=${filterTemplate}`;
+      if (filterStudentId) {
+        url += `&studentId=${encodeURIComponent(filterStudentId)}`;
+      }
 
       const res = await apiCall(url);
       if (res.ok) {
@@ -76,67 +74,38 @@ export const CertificateListAdmin: React.FC = () => {
 
   const loadStudents = async (studentIds: string[]) => {
     const studentMap = new Map<string, Student>();
-    for (const id of studentIds) {
-      try {
-        const res = await apiCall(`/api/students/${id}`);
-        if (res.ok) {
-          const student = await res.json();
-          studentMap.set(id, student);
-        }
-      } catch (err) {
-        // Ignore individual student load errors
+    try {
+      const res = await apiCall("/api/users/students");
+      if (res.ok) {
+        const allStudents = await res.json();
+        allStudents.forEach((student: any) => {
+          if (
+            studentIds.includes(student.studentCode) ||
+            studentIds.includes(student.id?.toString())
+          ) {
+            studentMap.set(student.studentCode, student);
+            studentMap.set(student.id?.toString(), student);
+          }
+        });
       }
+    } catch (err) {
+      console.warn("Could not load student info:", err);
     }
     setStudents(studentMap);
   };
 
-  const updateStatus = async (certificateId: string, newStatus: string) => {
-    try {
-      setUpdatingStatus(certificateId);
-      const res = await apiCall(`/api/certificates/${certificateId}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          status: newStatus,
-        }),
-      });
-
-      if (res.ok) {
-        // Update local state
-        setCertificates((prev) =>
-          prev.map((cert) =>
-            cert.id === certificateId ? { ...cert, status: newStatus } : cert
-          )
-        );
-      } else {
-        setError("Failed to update certificate status");
-      }
-    } catch (err) {
-      setError("Error updating certificate status");
-    } finally {
-      setUpdatingStatus(null);
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      setCurrentPage(0); // Reset về trang đầu tiên khi tìm kiếm mới
+      loadCertificates();
     }
   };
 
-  const deleteCertificate = async (certificateId: string) => {
-    if (!confirm("Are you sure you want to delete this certificate?")) return;
-
-    try {
-      const res = await apiCall(`/api/${certificateId}`, {
-        method: "DELETE",
-      });
-
-      if (res.ok) {
-        setCertificates((prev) =>
-          prev.filter((cert) => cert.id !== certificateId)
-        );
-      } else {
-        setError("Failed to delete certificate");
-      }
-    } catch (err) {
-      setError("Error deleting certificate");
-    }
+  // Hàm xử lý tìm kiếm
+  const handleSearch = () => {
+    setCurrentPage(0);
+    loadCertificates();
   };
-
   const getStatusColor = (status: string) => {
     switch (status.toUpperCase()) {
       case "ACTIVE":
@@ -148,10 +117,6 @@ export const CertificateListAdmin: React.FC = () => {
       default:
         return "bg-yellow-100 text-yellow-800 border-yellow-200";
     }
-  };
-
-  const getStudentInfo = (studentId: string) => {
-    return students.get(studentId);
   };
 
   if (loading && certificates.length === 0) {
@@ -199,45 +164,37 @@ export const CertificateListAdmin: React.FC = () => {
         )}
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-300 p-6 mb-6">
+       <div className="bg-white rounded-lg shadow-sm border border-gray-300 p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-blue-800 mb-2">
-                Status Filter
-              </label>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">All Status</option>
-                <option value="ACTIVE">Active</option>
-                <option value="EXPIRED">Expired</option>
-                <option value="REVOKED">Revoked</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-blue-800 mb-2">
-                Template Filter
+                Filter by Student ID
               </label>
               <input
                 type="text"
-                value={filterTemplate}
-                onChange={(e) => setFilterTemplate(e.target.value)}
-                placeholder="Enter template ID"
+                value={filterStudentId}
+                onChange={(e) => setFilterStudentId(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Enter student ID"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div className="flex items-end">
+            <div className="flex items-end space-x-2">
+              <button
+                onClick={handleSearch}
+                className="w-1/2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Search
+              </button>
               <button
                 onClick={() => {
-                  setFilterStatus("");
-                  setFilterTemplate("");
+                  setFilterStudentId("");
                   setCurrentPage(0);
+                  loadCertificates(); 
                 }}
-                className="w-full bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+                className="w-1/2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
               >
-                Clear Filters
+                Clear
               </button>
             </div>
           </div>
@@ -268,61 +225,46 @@ export const CertificateListAdmin: React.FC = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {certificates.map((cert) => {
-                  const student = getStudentInfo(cert.studentId);
                   return (
                     <tr key={cert.id} className="hover:bg-blue-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="text-sm font-medium text-blue-800">
-                            {cert.serialNo}
+                            {cert.serialNumber}
                           </div>
                           <div className="text-sm text-gray-600">
-                            ID: {cert.certId || cert.id}
+                            ID: {cert.certId}
                           </div>
                           <div className="text-sm text-gray-600">
-                            Template: {cert.templateId}
+                            Template: {cert.id}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="text-sm font-medium text-blue-800">
-                            {student ? student.name : "Loading..."}
+                            {cert.studentId || "Loadin.."}
                           </div>
-                          <div className="text-sm text-gray-600">
-                            {student ? student.studentCode : cert.studentId}
-                          </div>
-                          {student?.xepLoai && (
-                            <div className="text-sm text-gray-600">
-                              Grade: {student.xepLoai}
-                            </div>
-                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <select
-                          value={cert.status}
-                          onChange={(e) =>
-                            updateStatus(cert.id, e.target.value)
-                          }
-                          disabled={updatingStatus === cert.id}
+                        <div
                           className={`text-sm rounded-full px-2 py-1 border ${getStatusColor(
                             cert.status
                           )} focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50`}
                         >
-                          <option value="ACTIVE">Active</option>
-                          <option value="EXPIRED">Expired</option>
-                          <option value="REVOKED">Revoked</option>
-                        </select>
+                          <div>ISSUED</div>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         <div>
-                          Issued: {new Date(cert.issuedAt).toLocaleDateString()}
+                          Issued:{" "}
+                          {new Date(cert.issued_at).toLocaleDateString()}
                         </div>
-                        {cert.expireAt && (
+                        {cert.expire_at && (
                           <div>
                             Expires:{" "}
-                            {new Date(cert.expireAt).toLocaleDateString()}
+                            {new Date(cert.expire_at).toLocaleDateString()}
                           </div>
                         )}
                       </td>
@@ -330,17 +272,11 @@ export const CertificateListAdmin: React.FC = () => {
                         <div className="flex flex-col space-y-2">
                           <CertificatePdfActions
                             certId={cert.certId}
-                            studentCode={cert.studentCode}
+                            studentCode={cert.studentId}
                             className="w-full"
                             viewButtonText="Xem PDF"
                             buttonSize="sm"
                           />
-                          <button
-                            onClick={() => deleteCertificate(cert.id)}
-                            className="text-gray-600 hover:text-gray-800 text-xs"
-                          >
-                            Delete
-                          </button>
                         </div>
                       </td>
                     </tr>
