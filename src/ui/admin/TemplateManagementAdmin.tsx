@@ -113,78 +113,61 @@ export const TemplateManagementAdmin: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      setError("");
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  try {
+    setError("");
 
-      // Validate form data
-      if (!formData.id || !formData.name || !formData.type) {
-        setError("Please fill in all required fields");
-        addToast("error", "Error", "Please fill in all required fields");
-        return;
-      }
-
-      // Backend expects multipart/form-data with template and optional file
-      const formDataToSend = new FormData();
-
-      const templateData = {
-        id: formData.id,
-        name: formData.name,
-        description: formData.description,
-        type: formData.type,
-        filePath: formData.filePath,
-      };
-
-      formDataToSend.append(
-        "template",
-        new Blob([JSON.stringify(templateData)], {
-          type: "application/json",
-        })
-      );
-
-      if (selectedFile) {
-        formDataToSend.append("file", selectedFile);
-      }
-
-      const response = await apiCall("/api/templates/add-template", {
-        method: "POST",
-        body: formDataToSend,
-      });
-
-      // Parse response
-      const data = await response.json();
-      console.log("Create template response:", data);
-
-      if (data && data.success) {
-        console.log("Template created successfully:", data);
-
-        // Add new template to local state
-        if (data.data) {
-          setTemplates((prev) => [...prev, data.data]);
-        } else {
-          // Reload templates to get the latest data
-          await loadTemplates();
-        }
-
-        resetForm();
-        setShowForm(false);
-        addToast("success", "Success", "Template added successfully!");
-      } else {
-        const errorMsg = data?.message || "Failed to add template";
-        setError(errorMsg);
-        addToast("error", "Error", errorMsg);
-      }
-    } catch (err: any) {
-      console.error("Error adding template:", err);
-
-      const errorMessage =
-        err?.response?.data?.message || err?.message || "Error adding template";
-
-      setError(errorMessage);
-      addToast("error", "Error", errorMessage);
+    // Validate form data
+    if (!formData.id || !formData.name || !formData.type) {
+      setError("Please fill in all required fields");
+      addToast("error", "Error", "Please fill in all required fields");
+      return;
     }
-  };
+
+    // Sửa lại cách tạo FormData
+    const formDataToSend = new FormData();
+
+    // Thêm template data như form data thông thường, không phải JSON
+    formDataToSend.append("id", formData.id);
+    formDataToSend.append("name", formData.name);
+    formDataToSend.append("description", formData.description);
+    formDataToSend.append("type", formData.type);
+    formDataToSend.append("filePath", formData.filePath);
+
+    if (selectedFile) {
+      formDataToSend.append("file", selectedFile);
+    }
+
+    console.log("Sending form data:", Object.fromEntries(formDataToSend));
+
+    const response = await apiCall("/api/templates/add-template", {
+      method: "POST",
+      body: formDataToSend,
+      // KHÔNG set Content-Type header, browser sẽ tự set với boundary
+    });
+
+    const data = await response.json();
+    console.log("Create template response:", data);
+
+    if (data && data.success) {
+      console.log("Template created successfully:", data);
+      setTemplates((prev) => [...prev, data.data]);
+      resetForm();
+      setShowForm(false);
+      addToast("success", "Success", "Template added successfully!");
+    } else {
+      const errorMsg = data?.message || "Failed to add template";
+      setError(errorMsg);
+      addToast("error", "Error", errorMsg);
+    }
+  } catch (err: any) {
+    console.error("Error adding template:", err);
+    const errorMessage = err?.response?.data?.message || err?.message || "Error adding template";
+    setError(errorMessage);
+    addToast("error", "Error", errorMessage);
+  }
+};
 
 
   const handleDelete = (templateId: string) => {

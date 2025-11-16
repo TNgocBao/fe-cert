@@ -21,6 +21,10 @@ type Student = {
   studentCode: string;
   majorName: string;
   status: boolean;
+  gpa : number;
+  className: string;
+  startYear: string;
+  xepLoai: string;
 };
 
 export const UserManagement: React.FC = () => {
@@ -218,7 +222,7 @@ export const UserManagement: React.FC = () => {
           email: studentForm.email,
           studentCode: studentForm.studentCode,
           majorName: studentForm.majorName,
-          name: studentForm.fullName, // RegisterRequest expects 'name' not 'fullName'
+          name: studentForm.fullName, 
           year: studentForm.startYear,
           xepLoai: studentForm.xepLoai,
           role: 'STUDENT'

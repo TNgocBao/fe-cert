@@ -7,7 +7,7 @@ export const Register: React.FC = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'student',
+    role: 'STUDENT',
     name: '',
     dob: '',
     studentCode: '',
