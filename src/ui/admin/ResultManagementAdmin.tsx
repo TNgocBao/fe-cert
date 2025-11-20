@@ -27,14 +27,20 @@ type Course = {
 
 export const ResultManagementAdmin: React.FC = () => {
   const { apiCall } = useApi();
-  const [results, setResults] = useState<Result[]>([]);
+  const [allResults, setAllResults] = useState<Result[]>([]); // Tất cả results
+  const [results, setResults] = useState<Result[]>([]); // Results hiển thị trên trang hiện tại
   const [students, setStudents] = useState<Student[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const [showForm, setShowForm] = useState(false);
-  const [currentPage, setCurrentPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
+  
+  // Phân trang FE
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(4);
+  const totalItems = allResults.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+
   const [formData, setFormData] = useState({
     studentCode: "",
     courseCode: "",
@@ -88,7 +94,19 @@ export const ResultManagementAdmin: React.FC = () => {
 
   useEffect(() => {
     loadInitialData();
-  }, [currentPage]);
+  }, []);
+
+  // Effect để cập nhật results hiển thị khi allResults hoặc currentPage thay đổi
+  useEffect(() => {
+    updateDisplayedResults();
+  }, [allResults, currentPage]);
+
+  const updateDisplayedResults = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const currentResults = allResults.slice(startIndex, endIndex);
+    setResults(currentResults);
+  };
 
   const loadInitialData = async () => {
     try {
@@ -96,7 +114,7 @@ export const ResultManagementAdmin: React.FC = () => {
       await Promise.all([
         loadStudents(),
         loadCourses(),
-        loadResults(currentPage),
+        loadResults(),
       ]);
     } catch (err) {
       setError("Failed to load initial data");
@@ -106,8 +124,8 @@ export const ResultManagementAdmin: React.FC = () => {
     }
   };
 
-  // GET ALL results
-  const loadResults = async (page: number = 0) => {
+  // GET ALL results - load toàn bộ dữ liệu một lần
+  const loadResults = async () => {
     try {
       const response = await apiCall("http://localhost:8080/api/results");
 
@@ -118,14 +136,9 @@ export const ResultManagementAdmin: React.FC = () => {
       if (data && data.success) {
         // Backend trả về Page<ResultDTO> nên cần lấy content
         const resultsData = data.data?.content || data.data || [];
-        setResults(resultsData);
+        setAllResults(resultsData);
+        setCurrentPage(1); // Reset về trang đầu khi tải dữ liệu mới
         console.log(resultsData);
-        // Set pagination info
-        if (data.data) {
-          setTotalPages(data.data.totalPages || 0);
-        }
-
-        addToast("success", "Success", `Loaded ${resultsData.length} results`);
       } else {
         const errorMsg = data?.message || "Failed to load results";
         setError(errorMsg);
@@ -151,37 +164,38 @@ export const ResultManagementAdmin: React.FC = () => {
       console.warn("Could not load students:", err);
     }
   };
- const loadCourses = async () => {
-  try {
-    const response = await apiCall("http://localhost:8080/courses");
-    if (response.ok) {
-      const responseData = await response.json();
-      console.log('Courses response:', responseData);
-      
-      // Transform data để đảm bảo có courseCode và courseName
-      const coursesData = responseData.data?.content || responseData.data || [];
-      const transformedCourses = coursesData.map((course: any) => ({
-        id: course.id,
-        courseCode: course.courseCode,
-        courseName: course.courseName
-      }));
-      
-      setCourses(transformedCourses);
-      console.log('Loaded courses:', transformedCourses);
-    }
-  } catch (err) {
-    console.error("Could not load courses:", err);
-  }
-};
 
-const getCourseName = (courseCode: string) => {
-  if (!courseCode) return 'Unknown Course';
-  
-  const course = courses.find(c => c.courseCode === courseCode);
-  console.log(`Looking for course ${courseCode}, found:`, course);
-  
-  return course ? course.courseName : courseCode;
-};
+  const loadCourses = async () => {
+    try {
+      const response = await apiCall("http://localhost:8080/courses");
+      if (response.ok) {
+        const responseData = await response.json();
+        console.log('Courses response:', responseData);
+        
+        // Transform data để đảm bảo có courseCode và courseName
+        const coursesData = responseData.data?.content || responseData.data || [];
+        const transformedCourses = coursesData.map((course: any) => ({
+          id: course.id,
+          courseCode: course.courseCode,
+          courseName: course.courseName
+        }));
+        
+        setCourses(transformedCourses);
+        console.log('Loaded courses:', transformedCourses);
+      }
+    } catch (err) {
+      console.error("Could not load courses:", err);
+    }
+  };
+
+  const getCourseName = (courseCode: string) => {
+    if (!courseCode) return 'Unknown Course';
+    
+    const course = courses.find(c => c.courseCode === courseCode);
+    console.log(`Looking for course ${courseCode}, found:`, course);
+    
+    return course ? course.courseName : courseCode;
+  };
 
   // CREATE result
   const handleSubmit = async (e: React.FormEvent) => {
@@ -228,7 +242,7 @@ const getCourseName = (courseCode: string) => {
         addToast("success", "Success", "Result created successfully!");
 
         // Reload results to show the new one
-        await loadResults(currentPage);
+        await loadResults();
       } else {
         const errorMsg = data?.message || "Failed to create result";
         setError(errorMsg);
@@ -268,46 +282,76 @@ const getCourseName = (courseCode: string) => {
     return student ? student.fullName : studentCode;
   };
 
-
   const getGradeColor = (grade: string) => {
     switch (grade?.toUpperCase()) {
       case "A":
       case "A+":
-        return "bg-green-100 text-green-800 border border-green-200";
+        return "bg-emerald-100 text-emerald-800 border border-emerald-200";
       case "B":
       case "B+":
         return "bg-blue-100 text-blue-800 border border-blue-200";
       case "C":
       case "C+":
-        return "bg-yellow-100 text-yellow-800 border border-yellow-200";
+        return "bg-amber-100 text-amber-800 border border-amber-200";
       case "D":
       case "D+":
         return "bg-orange-100 text-orange-800 border border-orange-200";
       case "F":
-        return "bg-red-100 text-red-800 border border-red-200";
+        return "bg-rose-100 text-rose-800 border border-rose-200";
       default:
-        return "bg-gray-100 text-gray-800 border border-gray-200";
+        return "bg-slate-100 text-slate-800 border border-slate-200";
     }
   };
 
   const getScoreColor = (score: number) => {
-    if (score >= 8.5) return "text-green-600";
-    if (score >= 7.0) return "text-blue-600";
-    if (score >= 5.5) return "text-yellow-600";
-    if (score >= 4.0) return "text-orange-600";
-    return "text-red-600";
+    if (score >= 8.5) return "text-emerald-600 font-bold";
+    if (score >= 7.0) return "text-blue-600 font-bold";
+    if (score >= 5.5) return "text-amber-600 font-bold";
+    if (score >= 4.0) return "text-orange-600 font-bold";
+    return "text-rose-600 font-bold";
   };
 
-  if (loading && results.length === 0) {
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    const maxVisiblePages = 5;
+    
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pageNumbers.push(i);
+    }
+    
+    return pageNumbers;
+  };
+
+  // Calculate displayed range
+  const getDisplayedRange = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage + 1;
+    const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
+    return { startIndex, endIndex };
+  };
+
+  const { startIndex, endIndex } = getDisplayedRange();
+
+  if (loading && allResults.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-slate-600">Đang tải dữ liệu...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Toast Notifications */}
         <div className="fixed top-4 right-4 z-50 space-y-2">
@@ -428,33 +472,39 @@ const getCourseName = (courseCode: string) => {
 
         {/* Header */}
         <div className="mb-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-purple-800 mb-2">
-                Result Management
+              <h1 className="text-3xl font-bold text-slate-800 mb-2">
+                Quản Lý Kết Quả Học Tập
               </h1>
-              <p className="text-gray-600">
-                Admin panel for managing all student results
+              <p className="text-slate-600 text-lg">
+                Quản lý và theo dõi kết quả học tập của sinh viên
               </p>
             </div>
-            <button
-              onClick={handleCreateNew}
-              className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium shadow-sm hover:shadow-md"
-            >
-              + Add New Result
-            </button>
+            <div className="flex items-center gap-4">
+              <div className="bg-white rounded-lg shadow-sm border border-slate-200 px-4 py-2">
+                <div className="text-sm text-slate-500">Tổng số</div>
+                <div className="text-2xl font-bold text-blue-600">{totalItems}</div>
+                <div className="text-xs text-slate-400">kết quả</div>
+              </div>
+              <button
+                onClick={handleCreateNew}
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium shadow-sm hover:shadow-md flex items-center gap-2"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Thêm Kết Quả
+              </button>
+            </div>
           </div>
         </div>
 
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 shadow-sm">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <svg
-                  className="h-5 w-5 text-red-400"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
+                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
                   <path
                     fillRule="evenodd"
                     d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
@@ -463,7 +513,7 @@ const getCourseName = (courseCode: string) => {
                 </svg>
               </div>
               <div className="ml-3">
-                <p className="text-sm text-red-800">{error}</p>
+                <p className="text-sm text-red-800 font-medium">{error}</p>
               </div>
             </div>
           </div>
@@ -471,15 +521,15 @@ const getCourseName = (courseCode: string) => {
 
         {/* Create Form */}
         {showForm && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-300 p-6 mb-8">
-            <h2 className="text-xl font-semibold text-purple-800 mb-6">
-              Create New Result
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
+            <h2 className="text-xl font-semibold text-slate-800 mb-6">
+              Thêm Kết Quả Mới
             </h2>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Student *
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Sinh Viên *
                   </label>
                   <select
                     required
@@ -487,9 +537,9 @@ const getCourseName = (courseCode: string) => {
                     onChange={(e) =>
                       setFormData({ ...formData, studentCode: e.target.value })
                     }
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   >
-                    <option value="">Select Student</option>
+                    <option value="">Chọn sinh viên</option>
                     {students.map((student) => (
                       <option
                         key={student.studentCode}
@@ -501,8 +551,8 @@ const getCourseName = (courseCode: string) => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Course *
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Khóa Học *
                   </label>
                   <select
                     required
@@ -510,9 +560,9 @@ const getCourseName = (courseCode: string) => {
                     onChange={(e) =>
                       setFormData({ ...formData, courseCode: e.target.value })
                     }
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   >
-                    <option value="">Select Course</option>
+                    <option value="">Chọn khóa học</option>
                     {courses.map((course) => (
                       <option key={course.courseCode} value={course.courseCode}>
                         {course.courseName} ({course.courseCode})
@@ -522,10 +572,10 @@ const getCourseName = (courseCode: string) => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Score
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Điểm số
                   </label>
                   <input
                     type="number"
@@ -536,36 +586,36 @@ const getCourseName = (courseCode: string) => {
                     onChange={(e) =>
                       setFormData({ ...formData, score: e.target.value })
                     }
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     placeholder="0.00 - 10.00"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Grade
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Xếp loại
                   </label>
                   <select
                     value={formData.grade}
                     onChange={(e) =>
                       setFormData({ ...formData, grade: e.target.value })
                     }
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   >
-                    <option value="">Select Grade</option>
-                    <option value="A+">A+ (Excellent)</option>
-                    <option value="A">A (Very Good)</option>
-                    <option value="B+">B+ (Good)</option>
-                    <option value="B">B (Above Average)</option>
-                    <option value="C+">C+ (Average)</option>
-                    <option value="C">C (Below Average)</option>
-                    <option value="D+">D+ (Poor)</option>
-                    <option value="D">D (Very Poor)</option>
-                    <option value="F">F (Fail)</option>
+                    <option value="">Chọn xếp loại</option>
+                    <option value="A+">A+ (Xuất sắc)</option>
+                    <option value="A">A (Giỏi)</option>
+                    <option value="B+">B+ (Khá giỏi)</option>
+                    <option value="B">B (Khá)</option>
+                    <option value="C+">C+ (Trung bình khá)</option>
+                    <option value="C">C (Trung bình)</option>
+                    <option value="D+">D+ (Trung bình yếu)</option>
+                    <option value="D">D (Yếu)</option>
+                    <option value="F">F (Kém)</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Semester
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Học kỳ
                   </label>
                   <input
                     type="text"
@@ -573,13 +623,13 @@ const getCourseName = (courseCode: string) => {
                     onChange={(e) =>
                       setFormData({ ...formData, semester: e.target.value })
                     }
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="e.g., Fall 2024"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    placeholder="VD: HK1 2024"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    TimeStudied
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Thời gian học (tháng)
                   </label>
                   <input
                     type="text"
@@ -587,8 +637,8 @@ const getCourseName = (courseCode: string) => {
                     onChange={(e) =>
                       setFormData({ ...formData, timeStudied: e.target.value })
                     }
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="e.g. 6 months"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    placeholder="VD: 6 tháng"
                   />
                 </div>
               </div>
@@ -597,41 +647,55 @@ const getCourseName = (courseCode: string) => {
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+                  className="px-6 py-3 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors duration-200 font-medium"
                 >
-                  Cancel
+                  Hủy
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors shadow-sm hover:shadow-md"
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium shadow-sm hover:shadow-md"
                 >
-                  Create Result
+                  Tạo Kết Quả
                 </button>
               </div>
             </form>
           </div>
         )}
 
+        {/* Results Info */}
+        <div className="mb-4 flex items-center justify-between">
+          <div className="text-sm text-slate-600">
+            Hiển thị <span className="font-semibold">{results.length}</span> kết quả
+            {totalItems > itemsPerPage && (
+              <span> (từ {startIndex} đến {endIndex} trong tổng số {totalItems})</span>
+            )}
+          </div>
+          <div className="text-sm text-slate-500">
+            Trang {currentPage} / {totalPages}
+          </div>
+        </div>
+
         {/* Results List */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-300 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <h2 className="text-xl font-semibold text-purple-800">
-                Results ({results.length})
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+              <h2 className="text-xl font-semibold text-slate-800">
+                Danh Sách Kết Quả
               </h2>
               <button
-                onClick={() => loadResults(currentPage)}
-                className="bg-white text-gray-700 px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors text-sm font-medium shadow-sm"
+                onClick={loadResults}
+                className="bg-slate-100 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-200 transition-colors duration-200 font-medium text-sm flex items-center gap-2"
               >
-                🔄 Refresh
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Làm Mới
               </button>
             </div>
-          </div>
 
-          <div className="p-6">
             {results.length === 0 ? (
               <div className="text-center py-12">
-                <div className="mx-auto h-24 w-24 text-gray-300 mb-4">
+                <div className="mx-auto h-24 w-24 text-slate-300 mb-4">
                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
                       strokeLinecap="round"
@@ -641,43 +705,42 @@ const getCourseName = (courseCode: string) => {
                     />
                   </svg>
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  No results found
+                <h3 className="text-lg font-semibold text-slate-700 mb-2">
+                  Không tìm thấy kết quả
                 </h3>
-                <p className="text-gray-500 mb-6 max-w-md mx-auto">
-                  Start by creating your first result record. Track student
-                  performance and grades for each course.
+                <p className="text-slate-500 mb-6 max-w-md mx-auto">
+                  Bắt đầu bằng cách tạo kết quả đầu tiên. Theo dõi điểm số và xếp loại của sinh viên cho từng khóa học.
                 </p>
                 <button
                   onClick={handleCreateNew}
-                  className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium shadow-sm hover:shadow-md"
+                  className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium shadow-sm hover:shadow-md"
                 >
-                  + Create Your First Result
+                  + Tạo Kết Quả Đầu Tiên
                 </button>
               </div>
             ) : (
-              <div className="grid gap-4">
+              <div className="space-y-4">
                 {results.map((result) => (
                   <div
                     key={result.id}
-                    className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-all duration-300 bg-white"
+                    className="border border-slate-200 rounded-xl p-6 hover:shadow-md transition-all duration-300 bg-white"
                   >
-                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                      <div className="flex-1 space-y-3">
-                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                      <div className="flex-1 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                           <div className="space-y-2">
-                            <h3 className="font-semibold text-gray-900 text-lg">
+                            <h3 className="font-semibold text-slate-900 text-lg">
                               {getStudentName(result.studentCode)}
                             </h3>
                             <div className="flex flex-wrap items-center gap-3">
-                              <span className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
-                                🎓Tên khóa học : {getCourseName(result.courseCode)}
+                              <span className="text-sm text-slate-600 bg-slate-100 px-3 py-1 rounded-lg border border-slate-200">
+                                🎓 {getCourseName(result.courseCode)}
                               </span>
-                              <span className="text-sm text-gray-500">
-                                Student: {result.studentCode}
+                              <span className="text-sm text-slate-500">
+                                Mã SV: {result.studentCode}
                               </span>
-                              <span className="text-sm text-gray-500">
-                                Mã khóa học : {result.courseCode}
+                              <span className="text-sm text-slate-500">
+                                Mã Khóa Học : {result.courseCode}
                               </span>
                             </div>
                           </div>
@@ -687,32 +750,32 @@ const getCourseName = (courseCode: string) => {
                           {result.score !== null &&
                             result.score !== undefined && (
                               <div
-                                className={`text-2xl font-bold ${getScoreColor(
+                                className={`text-2xl ${getScoreColor(
                                   result.score
                                 )}`}
                               >
-                                {result.score.toFixed(2)}
+                              {result.score.toFixed(2)}
                               </div>
                             )}
 
                           {result.grade && (
                             <span
-                              className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${getGradeColor(
+                              className={`inline-flex px-3 py-1 text-sm font-semibold rounded-lg ${getGradeColor(
                                 result.grade
                               )}`}
                             >
-                              Grade: {result.grade}
+                              Xếp loại: {result.grade}
                             </span>
                           )}
 
                           {result.semester && (
-                            <span className="text-sm text-gray-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
-                              📅 Kì học : {result.semester}
+                            <span className="text-sm text-slate-600 bg-blue-50 px-3 py-1 rounded-lg border border-blue-200">
+                              📅 Năm học : {result.semester}
                             </span>
                           )}
                           {result.timeStudied && (
-                            <span className="text-sm text-gray-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
-                             Thời gian học (tháng) : {result.timeStudied}
+                            <span className="text-sm text-slate-600 bg-green-50 px-3 py-1 rounded-lg border border-green-200">
+                              ⏱️Thời gian học : {result.timeStudied}
                             </span>
                           )}
                         </div>
@@ -725,28 +788,57 @@ const getCourseName = (courseCode: string) => {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex justify-center items-center space-x-4 mt-8">
-                <button
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.max(0, prev - 1))
-                  }
-                  disabled={currentPage === 0}
-                  className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 font-medium transition-colors"
-                >
-                  ← Previous
-                </button>
-                <span className="text-sm text-gray-600 font-medium">
-                  Page {currentPage + 1} of {totalPages}
-                </span>
-                <button
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.min(totalPages - 1, prev + 1))
-                  }
-                  disabled={currentPage >= totalPages - 1}
-                  className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 font-medium transition-colors"
-                >
-                  Next →
-                </button>
+              <div className="border-t border-slate-200 mt-8 pt-6">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-slate-600">
+                    Hiển thị <span className="font-semibold">{startIndex}</span> -{" "}
+                    <span className="font-semibold">{endIndex}</span> của{" "}
+                    <span className="font-semibold">{totalItems}</span> kết quả
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    {/* Previous Button */}
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center space-x-1"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                      <span>Trước</span>
+                    </button>
+
+                    {/* Page Numbers */}
+                    <div className="flex space-x-1">
+                      {getPageNumbers().map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
+                            currentPage === page
+                              ? 'bg-blue-600 text-white shadow-sm'
+                              : 'text-slate-700 hover:bg-slate-100 border border-slate-300'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Next Button */}
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center space-x-1"
+                    >
+                      <span>Sau</span>
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>

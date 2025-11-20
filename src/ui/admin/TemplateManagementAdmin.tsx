@@ -51,7 +51,6 @@ export const TemplateManagementAdmin: React.FC = () => {
     }>
   >([]);
 
-  // Toast notification functions
   const addToast = (
     type: "success" | "error" | "info" | "warning",
     title: string,
@@ -60,7 +59,6 @@ export const TemplateManagementAdmin: React.FC = () => {
     const id = Date.now().toString();
     setToasts((prev) => [...prev, { id, type, title, message }]);
 
-    // Auto remove toast after 5 seconds
     setTimeout(() => {
       setToasts((prev) => prev.filter((toast) => toast.id !== id));
     }, 5000);
@@ -81,15 +79,12 @@ export const TemplateManagementAdmin: React.FC = () => {
 
       const response = await apiCall(`/api/templates`);
 
-      // Parse response để lấy data
       const data = await response.json();
-      console.log("API Response data:", data); 
+      // console.log("API Response data:", data);
 
-      // Kiểm tra response structure
       if (data && data.success) {
         setTemplates(data.data || []);
         if (data.data && data.data.length === 0) {
-          addToast("info", "Info", "No templates found");
         }
       } else {
         setTemplates([]);
@@ -115,60 +110,155 @@ export const TemplateManagementAdmin: React.FC = () => {
 
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
+  
   try {
     setError("");
+    setConfirmDialog(prev => ({ ...prev, loading: true }));
 
-    // Validate form data
-    if (!formData.id || !formData.name || !formData.type) {
-      setError("Please fill in all required fields");
-      addToast("error", "Error", "Please fill in all required fields");
+    // Validate required fields
+    if (!formData.id?.trim()) {
+      setError("Template ID is required");
+      addToast("error", "Error", "Please generate or enter a Template ID");
       return;
     }
 
-    // Sửa lại cách tạo FormData
+    if (!formData.name?.trim()) {
+      setError("Template name is required");
+      addToast("error", "Error", "Please enter a Template name");
+      return;
+    }
+
+    if (!formData.type?.trim()) {
+      setError("Template type is required");
+      addToast("error", "Error", "Please select a Template type");
+      return;
+    }
+
+    // Create FormData
     const formDataToSend = new FormData();
-
-    // Thêm template data như form data thông thường, không phải JSON
-    formDataToSend.append("id", formData.id);
-    formDataToSend.append("name", formData.name);
-    formDataToSend.append("description", formData.description);
+    
+    // Append template data
+    formDataToSend.append("id", formData.id.trim());
+    formDataToSend.append("name", formData.name.trim());
+    formDataToSend.append("description", formData.description?.trim() || "");
     formDataToSend.append("type", formData.type);
-    formDataToSend.append("filePath", formData.filePath);
+    formDataToSend.append("filePath", formData.filePath?.trim() || "");
 
+    // Append file if selected
     if (selectedFile) {
+      // Validate file type
+      const allowedTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'image/jpeg',
+        'image/png',
+        'image/jpg',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+      ];
+      
+      if (!allowedTypes.includes(selectedFile.type)) {
+        setError("Invalid file type. Please select PDF, Word, Image, or PowerPoint files.");
+        addToast("error", "Error", "Invalid file type");
+        return;
+      }
+
+      // Validate file size (10MB limit)
+      const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+      if (selectedFile.size > maxSize) {
+        setError("File size too large. Please select a file smaller than 10MB.");
+        addToast("error", "Error", "File size too large");
+        return;
+      }
+
       formDataToSend.append("file", selectedFile);
     }
 
-    console.log("Sending form data:", Object.fromEntries(formDataToSend));
+    console.log("Submitting template data:");
+    console.log("ID:", formData.id);
+    console.log("Name:", formData.name);
+    console.log("Type:", formData.type);
+    console.log("File:", selectedFile?.name || "No file");
 
+    console.log("FormData entries:");
+    for (let [key, value] of formDataToSend.entries()) {
+      console.log(key, value);
+    }
+
+    // Make API call
     const response = await apiCall("/api/templates/add-template", {
       method: "POST",
       body: formDataToSend,
-      // KHÔNG set Content-Type header, browser sẽ tự set với boundary
+   
     });
 
+    console.log("API Response status:", response.status);
+
+    if (!response.ok) {
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (parseError) {
+        const errorText = await response.text();
+        errorMessage = errorText || errorMessage;
+      }
+      
+      throw new Error(errorMessage);
+    }
+
     const data = await response.json();
-    console.log("Create template response:", data);
+    console.log("API Response data:", data);
 
     if (data && data.success) {
-      console.log("Template created successfully:", data);
-      setTemplates((prev) => [...prev, data.data]);
+      setTemplates(prev => {
+        const newTemplates = [...prev, data.data];
+        console.log("Updated templates list:", newTemplates);
+        return newTemplates;
+      });
+      
+      // Reset form and close
       resetForm();
       setShowForm(false);
-      addToast("success", "Success", "Template added successfully!");
+      
+      // Show success message
+      addToast(
+        "success", 
+        "Success", 
+        `Template "${data.data.name}" created successfully!`
+      );
+      
     } else {
-      const errorMsg = data?.message || "Failed to add template";
-      setError(errorMsg);
-      addToast("error", "Error", errorMsg);
+      // API returned failure
+      const errorMsg = data?.message || "Failed to create template";
+      throw new Error(errorMsg);
     }
+
   } catch (err: any) {
-    console.error("Error adding template:", err);
-    const errorMessage = err?.response?.data?.message || err?.message || "Error adding template";
-    setError(errorMessage);
-    addToast("error", "Error", errorMessage);
+    console.error("Error in handleSubmit:", err);
+    
+    // Handle specific error cases
+    let userFriendlyError = err.message || "An unexpected error occurred";
+    
+    if (err.message.includes("NetworkError") || err.message.includes("Failed to fetch")) {
+      userFriendlyError = "Network error. Please check your connection and try again.";
+    } else if (err.message.includes("401")) {
+      userFriendlyError = "Session expired. Please login again.";
+    } else if (err.message.includes("409") || err.message.includes("already exists")) {
+      userFriendlyError = "Template ID already exists. Please generate a new one.";
+    } else if (err.message.includes("413")) {
+      userFriendlyError = "File too large. Please select a smaller file.";
+    }
+    
+    setError(userFriendlyError);
+    addToast("error", "Error", userFriendlyError);
+    
+  } finally {
+    setConfirmDialog(prev => ({ ...prev, loading: false }));
   }
 };
-
 
   const handleDelete = (templateId: string) => {
     const template = templates.find((t) => t.id === templateId);
@@ -663,7 +753,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                                   template.type
                                 )}`}
                               >
-                               Type : {template.type}
+                                Type : {template.type}
                               </span>
                             </div>
                           </div>
@@ -671,7 +761,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
                         {template.description && (
                           <p className="text-gray-600 leading-relaxed">
-                          Mô tả :  {template.description}
+                            Mô tả : {template.description}
                           </p>
                         )}
 

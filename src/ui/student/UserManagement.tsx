@@ -66,6 +66,10 @@ export const UserManagement: React.FC = () => {
     staffCode: ''
   });
 
+  const [staffValidationErrors, setStaffValidationErrors] = useState({
+    email: '',
+  });
+
   // Student creation form
   const [showStudentForm, setShowStudentForm] = useState(false);
   const [studentForm, setStudentForm] = useState({
@@ -80,6 +84,11 @@ export const UserManagement: React.FC = () => {
     gpa: '',
     xepLoai: '',
     statusSV: 'ACTIVE'
+  });
+
+  const [studentValidationErrors, setStudentValidationErrors] = useState({
+    email: '',
+    gpa: '',
   });
 
   // Toast notification functions
@@ -149,29 +158,48 @@ export const UserManagement: React.FC = () => {
     e.preventDefault();
 
     // Validation
-    if (!staffForm.username.trim() || !staffForm.password.trim() || !staffForm.fullName.trim()) {
+    const errors = { email: "" };
+
+    // Email validation
+    if (staffForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(staffForm.email)) {
+      errors.email = "Email không hợp lệ";
+    }
+
+    setStaffValidationErrors(errors);
+
+    // If there are validation errors, don't submit
+    if (errors.email) {
+      addToast('error', 'Lỗi xác thực', 'Vui lòng kiểm tra thông tin email');
+      return;
+    }
+
+    if (!staffForm.username.trim() || !staffForm.fullName.trim()) {
       addToast('error', 'Lỗi xác thực', 'Vui lòng điền đầy đủ thông tin bắt buộc');
       return;
     }
 
-    if (staffForm.password.length < 6) {
+    if (staffForm.password && staffForm.password.length < 6) {
       addToast('error', 'Lỗi xác thực', 'Mật khẩu phải có ít nhất 6 ký tự');
       return;
     }
 
     try {
       setLoading(true);
-      const res = await apiCall('/api/users/staff', {
+      const registerRequest = {
+        username: staffForm.username,
+        password: staffForm.password || undefined, // Will use default if empty
+        name: staffForm.fullName,
+        email: staffForm.email,
+        staffCode: staffForm.staffCode,
+        role: "STAFF"
+      };
+
+      const res = await apiCall('/api/users/create', {
         method: 'POST',
-        body: JSON.stringify({
-          username: staffForm.username,
-          password: staffForm.password,
-          fullName: staffForm.fullName,
-          email: staffForm.email,
-          phone: staffForm.phone,
-          staffCode: staffForm.staffCode,
-          departmentId: 1
-        })
+        body: JSON.stringify(registerRequest),
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
 
       if (res.ok) {
@@ -201,32 +229,59 @@ export const UserManagement: React.FC = () => {
     e.preventDefault();
 
     // Validation
-    if (!studentForm.username.trim() || !studentForm.password.trim() ||
-        !studentForm.fullName.trim() || !studentForm.studentCode.trim()) {
+    const errors = { email: "", gpa: "" };
+
+    // Email validation
+    if (studentForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(studentForm.email)) {
+      errors.email = "Email không hợp lệ";
+    }
+
+    // GPA validation
+    if (studentForm.gpa) {
+      const gpaValue = parseFloat(studentForm.gpa);
+      if (isNaN(gpaValue) || gpaValue < 0 || gpaValue > 4) {
+        errors.gpa = "GPA phải là số từ 0 đến 4";
+      }
+    }
+
+    setStudentValidationErrors(errors);
+
+    // If there are validation errors, don't submit
+    if (errors.email || errors.gpa) {
+      addToast('error', 'Lỗi xác thực', 'Vui lòng kiểm tra thông tin đã nhập');
+      return;
+    }
+
+    if (!studentForm.username.trim() || !studentForm.fullName.trim() || !studentForm.studentCode.trim()) {
       addToast('error', 'Lỗi xác thực', 'Vui lòng điền đầy đủ thông tin bắt buộc');
       return;
     }
 
-    if (studentForm.password.length < 6) {
+    if (studentForm.password && studentForm.password.length < 6) {
       addToast('error', 'Lỗi xác thực', 'Mật khẩu phải có ít nhất 6 ký tự');
       return;
     }
 
     try {
       setLoading(true);
+      const registerRequest = {
+        username: studentForm.username,
+        password: studentForm.password || undefined, // Will use default if empty
+        name: studentForm.fullName,
+        email: studentForm.email,
+        studentCode: studentForm.studentCode,
+        majorName: studentForm.majorName,
+        year: studentForm.startYear,
+        xepLoai: studentForm.xepLoai,
+        role: "STUDENT"
+      };
+
       const res = await apiCall('/api/users/create', {
         method: 'POST',
-        body: JSON.stringify({
-          username: studentForm.username,
-          password: studentForm.password,
-          email: studentForm.email,
-          studentCode: studentForm.studentCode,
-          majorName: studentForm.majorName,
-          name: studentForm.fullName, 
-          year: studentForm.startYear,
-          xepLoai: studentForm.xepLoai,
-          role: 'STUDENT'
-        })
+        body: JSON.stringify(registerRequest),
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
 
       if (res.ok) {
@@ -570,15 +625,18 @@ export const UserManagement: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-blue-800 mb-1">
-                      Mật khẩu *
+                      Mật Khẩu
                     </label>
                     <input
                       type="password"
-                      required
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       value={staffForm.password}
                       onChange={(e) => setStaffForm(prev => ({ ...prev, password: e.target.value }))}
+                      placeholder="Để trống để dùng mật khẩu mặc định (123456)"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Mật khẩu mặc định sẽ là "123456" nếu không nhập
+                    </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-blue-800 mb-1">
@@ -598,10 +656,20 @@ export const UserManagement: React.FC = () => {
                     </label>
                     <input
                       type="email"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 ${
+                        staffValidationErrors.email ? "border-red-300 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
+                      }`}
                       value={staffForm.email}
-                      onChange={(e) => setStaffForm(prev => ({ ...prev, email: e.target.value }))}
+                      onChange={(e) => {
+                        setStaffForm(prev => ({ ...prev, email: e.target.value }));
+                        if (staffValidationErrors.email) {
+                          setStaffValidationErrors({ ...staffValidationErrors, email: "" });
+                        }
+                      }}
                     />
+                    {staffValidationErrors.email && (
+                      <p className="text-sm text-red-600 mt-1">{staffValidationErrors.email}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-blue-800 mb-1">
@@ -798,15 +866,18 @@ export const UserManagement: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-blue-800 mb-1">
-                      Mật khẩu *
+                      Mật Khẩu
                     </label>
                     <input
                       type="password"
-                      required
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       value={studentForm.password}
                       onChange={(e) => setStudentForm(prev => ({ ...prev, password: e.target.value }))}
+                      placeholder="Để trống để dùng mật khẩu mặc định (123456)"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Mật khẩu mặc định sẽ là "123456" nếu không nhập
+                    </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-blue-800 mb-1">
@@ -826,10 +897,20 @@ export const UserManagement: React.FC = () => {
                     </label>
                     <input
                       type="email"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 ${
+                        studentValidationErrors.email ? "border-red-300 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
+                      }`}
                       value={studentForm.email}
-                      onChange={(e) => setStudentForm(prev => ({ ...prev, email: e.target.value }))}
+                      onChange={(e) => {
+                        setStudentForm(prev => ({ ...prev, email: e.target.value }));
+                        if (studentValidationErrors.email) {
+                          setStudentValidationErrors({ ...studentValidationErrors, email: "" });
+                        }
+                      }}
                     />
+                    {studentValidationErrors.email && (
+                      <p className="text-sm text-red-600 mt-1">{studentValidationErrors.email}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-blue-800 mb-1">
@@ -885,10 +966,20 @@ export const UserManagement: React.FC = () => {
                       step="0.01"
                       min="0"
                       max="4"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 ${
+                        studentValidationErrors.gpa ? "border-red-300 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
+                      }`}
                       value={studentForm.gpa}
-                      onChange={(e) => setStudentForm(prev => ({ ...prev, gpa: e.target.value }))}
+                      onChange={(e) => {
+                        setStudentForm(prev => ({ ...prev, gpa: e.target.value }));
+                        if (studentValidationErrors.gpa) {
+                          setStudentValidationErrors({ ...studentValidationErrors, gpa: "" });
+                        }
+                      }}
                     />
+                    {studentValidationErrors.gpa && (
+                      <p className="text-sm text-red-600 mt-1">{studentValidationErrors.gpa}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-blue-800 mb-1">

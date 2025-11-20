@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import { useAuth } from '../AuthContext';
 import { useNavigate } from 'react-router-dom';
 
+
+
 export const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -134,17 +137,19 @@ export const Login: React.FC = () => {
             </button>
           </div>
 
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => navigate('/register')}
-              className="text-blue-600 hover:text-blue-500"
-            >
-              Chưa có tài khoản? Đăng ký tại đây
-            </button>
+          <div className="text-center space-y-2">
+            <div>
+              <button
+                type="button"
+                onClick={() => navigate('/register')}
+                className="text-blue-600 hover:text-blue-500"
+              >
+                Chưa có tài khoản? Đăng ký tại đây
+              </button>
+            </div>
           </div>
         </form>
-      </div>
+      </div>      
     </div>
   );
 };

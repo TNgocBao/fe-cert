@@ -18,6 +18,7 @@ import { UserProfile } from './student/UserProfile';
 import { StudentManagementAdmin } from './admin/StudentManagementAdmin';
 import { StudentManagementStaff } from './staff/StudentManagementStaff';
 import { StudentResultsPage } from './student/StudentResultsPage';
+import { NewsAnnouncements } from './NewsAnnouncements';
 import VerifyDiploma from './certificates/VerifyDiploma';
 const AppRoutes: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
@@ -35,13 +36,15 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/"
         element={
-          <ProtectedRoute>
+          isAuthenticated ? (
             <Layout>
               {user?.role === 'ADMIN' ? <AdminDashboard /> :
                user?.role === 'STAFF' ? <StaffDashboard /> :
                <StudentDashboard />}
             </Layout>
-          </ProtectedRoute>
+          ) : (
+            <NewsAnnouncements />
+          )
         }
       />
       <Route   

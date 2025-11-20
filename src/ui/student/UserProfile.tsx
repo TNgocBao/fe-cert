@@ -27,11 +27,51 @@ export const UserProfile: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const [editForm, setEditForm] = useState({
     name: '',
     email: '',
     phone: ''
   });
+  const [passwordForm, setPasswordForm] = useState({
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordErrors, setPasswordErrors] = useState({
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  // Toast notification system
+  const [toasts, setToasts] = useState<
+    Array<{
+      id: string;
+      type: "success" | "error" | "info";
+      title: string;
+      message: string;
+    }>
+  >([]);
+
+  // Toast notification functions
+  const addToast = (
+    type: "success" | "error" | "info",
+    title: string,
+    message: string
+  ) => {
+    const id = Date.now().toString();
+    setToasts((prev) => [...prev, { id, type, title, message }]);
+
+    // Auto remove toast after 5 seconds
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    }, 5000);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
 
   useEffect(() => {
     loadProfile();
@@ -95,6 +135,71 @@ export const UserProfile: React.FC = () => {
     }
   };
 
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validation
+    const errors = { oldPassword: '', newPassword: '', confirmPassword: '' };
+
+    if (!passwordForm.oldPassword.trim()) {
+      errors.oldPassword = 'Vui lòng nhập mật khẩu cũ';
+    }
+
+    if (!passwordForm.newPassword.trim()) {
+      errors.newPassword = 'Vui lòng nhập mật khẩu mới';
+    } else if (passwordForm.newPassword.length < 6) {
+      errors.newPassword = 'Mật khẩu mới phải có ít nhất 6 ký tự';
+    }
+
+    if (!passwordForm.confirmPassword.trim()) {
+      errors.confirmPassword = 'Vui lòng xác nhận mật khẩu mới';
+    } else if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      errors.confirmPassword = 'Mật khẩu xác nhận không khớp';
+    }
+
+    setPasswordErrors(errors);
+
+    // If there are validation errors, don't submit
+    if (errors.oldPassword || errors.newPassword || errors.confirmPassword) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await apiCall('/api/users/student/change-password', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          oldPassword: passwordForm.oldPassword,
+          newPassword: passwordForm.newPassword
+        }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (res.ok) {
+        setShowChangePassword(false);
+        setPasswordForm({
+          oldPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        setPasswordErrors({ oldPassword: '', newPassword: '', confirmPassword: '' });
+        setError('');
+        // Show success message
+        addToast('success', 'Thành công', 'Mật khẩu đã được thay đổi thành công!');
+      } else {
+        const errorData = await res.json();
+        setError(errorData.message || 'Không thể thay đổi mật khẩu');
+      }
+    } catch (err) {
+      console.error('Error changing password:', err);
+      setError('Lỗi khi thay đổi mật khẩu');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading && !profile) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -105,6 +210,123 @@ export const UserProfile: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      {/* Toast Notifications */}
+      <div className="fixed top-4 right-4 z-50 space-y-2">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`max-w-sm w-80 shadow-lg rounded-lg pointer-events-auto border ${
+              toast.type === "success"
+                ? "bg-green-50 border-green-200"
+                : toast.type === "error"
+                ? "bg-red-50 border-red-200"
+                : "bg-blue-50 border-blue-200"
+            }`}
+          >
+            <div className="p-4">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  {toast.type === "success" && (
+                    <svg
+                      className="h-6 w-6 text-green-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  )}
+                  {toast.type === "error" && (
+                    <svg
+                      className="h-6 w-6 text-red-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  )}
+                  {toast.type === "info" && (
+                    <svg
+                      className="h-6 w-6 text-blue-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  )}
+                </div>
+                <div className="ml-3 w-0 flex-1">
+                  <p
+                    className={`text-sm font-medium ${
+                      toast.type === "success"
+                        ? "text-green-800"
+                        : toast.type === "error"
+                        ? "text-red-800"
+                        : "text-blue-800"
+                    }`}
+                  >
+                    {toast.title}
+                  </p>
+                  <p
+                    className={`mt-1 text-sm ${
+                      toast.type === "success"
+                        ? "text-green-700"
+                        : toast.type === "error"
+                        ? "text-red-700"
+                        : "text-blue-700"
+                    }`}
+                  >
+                    {toast.message}
+                  </p>
+                </div>
+                <div className="ml-4 flex-shrink-0 flex">
+                  <button
+                    className={`inline-flex rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                      toast.type === "success"
+                        ? "text-green-400 hover:text-green-600 focus:ring-green-500"
+                        : toast.type === "error"
+                        ? "text-red-400 hover:text-red-600 focus:ring-red-500"
+                        : "text-blue-400 hover:text-blue-600 focus:ring-blue-500"
+                    }`}
+                    onClick={() => removeToast(toast.id)}
+                  >
+                    <span className="sr-only">Close</span>
+                    <svg
+                      className="h-5 w-5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -160,12 +382,20 @@ export const UserProfile: React.FC = () => {
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-xl font-semibold text-gray-900">Thông Tin Cá Nhân</h3>
                   {!isEditing && (
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      Chỉnh Sửa
-                    </button>
+                    <div className="flex space-x-3">
+                      <button
+                        onClick={() => setShowChangePassword(true)}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                      >
+                        Đổi Mật Khẩu
+                      </button>
+                      <button
+                        onClick={() => setIsEditing(true)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Chỉnh Sửa
+                      </button>
+                    </div>
                   )}
                 </div>
 
@@ -331,6 +561,120 @@ export const UserProfile: React.FC = () => {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Change Password Modal */}
+        {showChangePassword && (
+          <div className="fixed inset-0  bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
+              <div className="p-6 border-b border-gray-200">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Đổi Mật Khẩu
+                </h3>
+                <p className="text-sm mt-1 text-gray-600">
+                  Nhập mật khẩu cũ và mật khẩu mới của bạn
+                </p>
+              </div>
+              <form onSubmit={handleChangePassword} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Mật Khẩu Cũ *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={passwordForm.oldPassword}
+                    onChange={(e) => {
+                      setPasswordForm(prev => ({ ...prev, oldPassword: e.target.value }));
+                      if (passwordErrors.oldPassword) {
+                        setPasswordErrors(prev => ({ ...prev, oldPassword: '' }));
+                      }
+                    }}
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                      passwordErrors.oldPassword ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                    }`}
+                    placeholder="Nhập mật khẩu cũ"
+                  />
+                  {passwordErrors.oldPassword && (
+                    <p className="text-sm text-red-600 mt-1">{passwordErrors.oldPassword}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Mật Khẩu Mới *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={passwordForm.newPassword}
+                    onChange={(e) => {
+                      setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }));
+                      if (passwordErrors.newPassword) {
+                        setPasswordErrors(prev => ({ ...prev, newPassword: '' }));
+                      }
+                    }}
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                      passwordErrors.newPassword ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                    }`}
+                    placeholder="Nhập mật khẩu mới"
+                  />
+                  {passwordErrors.newPassword && (
+                    <p className="text-sm text-red-600 mt-1">{passwordErrors.newPassword}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Xác Nhận Mật Khẩu Mới *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) => {
+                      setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }));
+                      if (passwordErrors.confirmPassword) {
+                        setPasswordErrors(prev => ({ ...prev, confirmPassword: '' }));
+                      }
+                    }}
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                      passwordErrors.confirmPassword ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                    }`}
+                    placeholder="Nhập lại mật khẩu mới"
+                  />
+                  {passwordErrors.confirmPassword && (
+                    <p className="text-sm text-red-600 mt-1">{passwordErrors.confirmPassword}</p>
+                  )}
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowChangePassword(false);
+                      setPasswordForm({
+                        oldPassword: '',
+                        newPassword: '',
+                        confirmPassword: ''
+                      });
+                      setPasswordErrors({ oldPassword: '', newPassword: '', confirmPassword: '' });
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors font-medium"
+                  >
+                    {loading ? 'Đang đổi...' : 'Đổi Mật Khẩu'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

@@ -61,9 +61,9 @@ export const CertificateSignFormStaff: React.FC = () => {
   // Form data cho certificate signing
   const [formData, setFormData] = useState<SignCertRequest>({
     p12File: null,
-    templateId: "CERT001",
-    staffCode: user?.username || "",
-    alias: user?.username || "",
+    templateId: "ID",
+    staffCode: user?.staffCode || "",
+    alias: user?.staffCode || "",
     keystorePass: "",
     courseCode: "", // Course code ở root level
     students: [],

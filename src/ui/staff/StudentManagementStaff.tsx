@@ -31,6 +31,11 @@ export const StudentManagementStaff: React.FC = () => {
     statusSV: "",
   });
 
+  const [validationErrors, setValidationErrors] = useState({
+    email: "",
+    gpa: "",
+  });
+
   useEffect(() => {
     loadStudents();
   }, []);
@@ -71,6 +76,30 @@ export const StudentManagementStaff: React.FC = () => {
   const handleUpdateStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingStudent) return;
+
+    // Validation
+    const errors = { email: "", gpa: "" };
+
+    // Email validation
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = "Email không hợp lệ";
+    }
+
+    // GPA validation
+    if (formData.gpa) {
+      const gpaValue = parseFloat(formData.gpa);
+      if (isNaN(gpaValue) || gpaValue < 0 || gpaValue > 4) {
+        errors.gpa = "GPA phải là số từ 0 đến 4";
+      }
+    }
+
+    setValidationErrors(errors);
+
+    // If there are validation errors, don't submit
+    if (errors.email || errors.gpa) {
+      return;
+    }
+
     const studentCodeToUpdate = encodeURIComponent(formData.studentCode);
 
     try {
@@ -418,7 +447,7 @@ export const StudentManagementStaff: React.FC = () => {
 
       {/* Edit Student Modal - Limited for STAFF */}
       {editingStudent && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0  bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div
               className="p-6 border-b"
@@ -482,15 +511,25 @@ export const StudentManagementStaff: React.FC = () => {
                   <input
                     type="email"
                     value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
+                    onChange={(e) => {
+                      setFormData({ ...formData, email: e.target.value });
+                      if (validationErrors.email) {
+                        setValidationErrors({ ...validationErrors, email: "" });
+                      }
+                    }}
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                      validationErrors.email ? "border-red-300 focus:ring-red-500" : ""
+                    }`}
                     style={{
-                      borderColor: colors.border,
-                      boxShadow: `0 0 0 2px ${colors.accent}`,
+                      borderColor: validationErrors.email ? "#ef4444" : colors.border,
+                      boxShadow: validationErrors.email
+                        ? "0 0 0 2px rgb(239 68 68 / 0.2)"
+                        : `0 0 0 2px ${colors.accent}`,
                     }}
                   />
+                  {validationErrors.email && (
+                    <p className="text-sm text-red-600 mt-1">{validationErrors.email}</p>
+                  )}
                 </div>
                 <div>
                   <label
@@ -591,15 +630,25 @@ export const StudentManagementStaff: React.FC = () => {
                     min="0"
                     max="4"
                     value={formData.gpa}
-                    onChange={(e) =>
-                      setFormData({ ...formData, gpa: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
+                    onChange={(e) => {
+                      setFormData({ ...formData, gpa: e.target.value });
+                      if (validationErrors.gpa) {
+                        setValidationErrors({ ...validationErrors, gpa: "" });
+                      }
+                    }}
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                      validationErrors.gpa ? "border-red-300 focus:ring-red-500" : ""
+                    }`}
                     style={{
-                      borderColor: colors.border,
-                      boxShadow: `0 0 0 2px ${colors.accent}`,
+                      borderColor: validationErrors.gpa ? "#ef4444" : colors.border,
+                      boxShadow: validationErrors.gpa
+                        ? "0 0 0 2px rgb(239 68 68 / 0.2)"
+                        : `0 0 0 2px ${colors.accent}`,
                     }}
                   />
+                  {validationErrors.gpa && (
+                    <p className="text-sm text-red-600 mt-1">{validationErrors.gpa}</p>
+                  )}
                 </div>
                 <div className="flex items-center">
                   <input
